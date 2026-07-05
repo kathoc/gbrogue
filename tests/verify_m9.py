@@ -160,21 +160,6 @@ def main() -> int:
     gb.shot("m9_01_menu")
     gb.press_until("b", lambda rows: not any("MENU" in r for r in rows))
 
-    # --- log viewer via menu (rest first so the newest ring entry is
-    #     deterministic — monster chatter can flush older lines out)
-    gb.tick(20)
-    gb.hold("b")
-    gb.tick(4)
-    gb.press("a", hold=8, settle=8)
-    gb.release("b")
-    gb.tick(40)
-    menu_pick(3)
-    gb.expect(gb.wait_screen(lambda rows: any("LOG" in r for r in rows)),
-              "log screen never appeared")
-    gb.expect_on_screen("You wait")     # archived just now
-    gb.shot("m9_02_log")
-    gb.press_until("b", lambda rows: not any("LOG" in r for r in rows))
-
     # --- throw: shuriken kit slot, via menu (Throw is row 2)
     def shuriken_qty():
         for slot, it in read_pack(gb).items():
@@ -202,7 +187,7 @@ def main() -> int:
                     n += 1
         return n
     gb.expect(gfx_cells() == 0, "ASCII mode should have no gfx tiles")
-    menu_pick(4)                          # Display mode
+    menu_pick(3)                          # Display mode
     gb.expect(gb.wait_screen(lambda rows: gb.rd("g_render_mode") == 1),
               "render mode flag not set")
     gb.tick(60)                           # let the repaint land
@@ -210,15 +195,15 @@ def main() -> int:
     gb.expect(n > 30, f"GFX mode shows only {n} gfx cells")
     gb.shot("m9_03_gfx_mode")
     # toggle back
-    menu_pick(4)
+    menu_pick(3)
     gb.expect(gb.wait_screen(lambda rows: gb.rd("g_render_mode") == 0),
               "render mode flag not cleared")
     gb.tick(60)
     gb.expect(gfx_cells() == 0, "ASCII mode not restored")
     print(f"  GFX toggle ok ({n} gfx cells)")
 
-    # --- suspend via menu (Save & quit, index 8)
-    menu_pick(8)
+    # --- suspend via menu (Save & quit, index 6)
+    menu_pick(6)
     gb.expect(gb.wait_screen(lambda rows: any("Game saved" in r for r in rows)),
               "save popup never appeared")
     gb.press_until("a", lambda rows: any("> CONTINUE" in r for r in rows))

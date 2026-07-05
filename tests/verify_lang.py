@@ -6,7 +6,7 @@ full-map overview.
 from gbtest import GB, Failure
 from lang_map import STRINGS
 
-MENU_LANG_ROW = 2 + 6          # Language entry (index 6)
+MENU_LANG_ROW = 2 + 5          # Language entry (index 5)
 MENU_ON = lambda rows: any("MENU" in r for r in rows)
 MENU_ON_JA = lambda rows: any(STRINGS["MENU_TITLE"][1] in r for r in rows)
 
@@ -27,7 +27,9 @@ def main() -> int:
     gb.expect(gb.wait_screen(lambda rows: any("> はじめる" in r for r in rows)),
               "title not in Japanese by default")
     gb.expect_on_screen("LANGUAGE:JPN")
-    gb.press("down", hold=8, settle=20)        # move onto LANGUAGE
+    # rows are NEW GAME(0) / RANKING(1) / LANGUAGE(2): step down twice
+    gb.press("down", hold=8, settle=20)        # onto RANKING
+    gb.press("down", hold=8, settle=20)        # onto LANGUAGE
     gb.expect(gb.wait_screen(
         lambda rows: any("> LANGUAGE:JPN" in r for r in rows)),
         "LANGUAGE row never took the cursor")
