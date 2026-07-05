@@ -54,6 +54,13 @@ void render_sprite_hide(uint8_t i);
  */
 #define FLASH_HURT 0u
 #define FLASH_HIT  1u
+/* Queue state is shared: render_flash_add lives in bank0_flash.c (fixed
+   bank) so banked item logic can enqueue a hit flash; render_flash_play
+   (render.c) drains it. */
+#define FLASH_MAX 4u
+typedef struct { uint8_t x, y, style, spr; } flash_ent_t;
+extern flash_ent_t g_flashq[FLASH_MAX];
+extern uint8_t     g_flash_n;
 void render_flash_add(uint8_t wx, uint8_t wy, uint8_t style, uint8_t spr);
 void render_flash_play(void);
 /* Status-row tile columns of the HP readout (status.c keeps them

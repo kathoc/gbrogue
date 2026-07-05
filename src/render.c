@@ -381,11 +381,8 @@ void render_sprite_hide(uint8_t i) {
 
 /* ------------------------------------------------------ damage flash */
 
-#define FLASH_MAX 4u
-static struct {
-    uint8_t x, y, style, spr;
-} g_flashq[FLASH_MAX];
-static uint8_t g_flash_n;
+/* g_flashq / g_flash_n / render_flash_add live in bank0_flash.c (fixed
+   bank); the queue type + externs are in render.h. */
 
 static void flash_cell_attr(uint8_t x, uint8_t y, uint8_t attr) {
     if (!g_is_gbc) return;
@@ -409,15 +406,6 @@ static void hp_field_attr(uint8_t attr) {
     VBK_REG = 1;
     set_win_tiles(g_hp_col0, 1, n, 1, attrs);
     VBK_REG = 0;
-}
-
-void render_flash_add(uint8_t wx, uint8_t wy, uint8_t style, uint8_t spr) {
-    if (g_flash_n >= FLASH_MAX) return;
-    g_flashq[g_flash_n].x = wx;
-    g_flashq[g_flash_n].y = wy;
-    g_flashq[g_flash_n].style = style;
-    g_flashq[g_flash_n].spr = spr;
-    g_flash_n++;
 }
 
 void render_flash_play(void) {
