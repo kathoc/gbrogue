@@ -11,7 +11,7 @@
  *   ld a,(len)    ; ld b,a
  * loop:
  *   ld a,(hl+) ; ld (de),a ; inc de ; dec b ; jr nz,loop
- *   ld a,1 ; ld (0x2000),a             ; back to bank 1 (flat model)
+ *   ld a,(_current_bank) ; ld (0x2000),a   ; restore the CALLER's bank
  *   ei ; ret
  *
  * The absolute addresses of the parameter globals are patched into the
@@ -23,9 +23,9 @@ static const uint8_t *g_fc_src;
 static uint8_t *g_fc_dst;
 static uint8_t  g_fc_len;
 
-static uint8_t code_buf[40];
+static uint8_t code_buf[41];
 
-static const uint8_t CODE_TMPL[40] = {
+static const uint8_t CODE_TMPL[41] = {
     0xF3,                   /*  0: di            */
     0xFA, 0x00, 0x00,       /*  1: ld a,(bank)   */
     0xEA, 0x00, 0x20,       /*  4: ld (2000h),a  */
@@ -44,10 +44,10 @@ static const uint8_t CODE_TMPL[40] = {
     0x13,                   /* 29: inc de        */
     0x05,                   /* 30: dec b         */
     0x20, 0xFA,             /* 31: jr nz,-6      */
-    0x3E, 0x01,             /* 33: ld a,1        */
-    0xEA, 0x00, 0x20,       /* 35: ld (2000h),a  */
-    0xFB,                   /* 38: ei            */
-    0xC9,                   /* 39: ret           */
+    0xFA, 0x00, 0x00,       /* 33: ld a,(_current_bank) */
+    0xEA, 0x00, 0x20,       /* 36: ld (2000h),a  */
+    0xFB,                   /* 39: ei            */
+    0xC9,                   /* 40: ret           */
 };
 
 static void patch(uint8_t at, uint16_t addr) {
@@ -64,6 +64,7 @@ void farcopy_init(void) {
     patch(16, (uint16_t)&g_fc_dst);
     patch(20, (uint16_t)((uint16_t)&g_fc_dst + 1u));
     patch(24, (uint16_t)&g_fc_len);
+    patch(34, (uint16_t)&_current_bank);
 }
 
 void far_copy(uint8_t bank, const void *src, void *dst, uint8_t len) {

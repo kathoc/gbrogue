@@ -28,6 +28,7 @@
 #include "sfx.h"
 #include "bgm.h"
 #include "rank.h"
+#include "bankcall.h"
 
 /*
  * State machine + turn loop only. UI screens live in their own
