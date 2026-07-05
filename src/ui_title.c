@@ -62,8 +62,7 @@ static void draw_menu(uint8_t sel, uint8_t n) {
             draw_item(y, sid, (uint8_t)(sel == i));
         }
     }
-    if (g_debug) render_text(0, 0, "DBG");   /* invincibility armed */
-    render_present();
+    render_present();   /* debug-armed feedback is the sfx blip below */
 }
 
 static void paint_title(uint8_t sel, uint8_t n) {

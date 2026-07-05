@@ -6,8 +6,12 @@
 /*
  * Persistent high-score ranking (SRAM, survives permadeath). Top runs by
  * gold; each row keeps the depth reached, with the deepest/final pair so
- * a climb-back reads "B26->B3". Kept deliberately tiny — the 32KB HOME
- * budget has no room for the death-cause/play-count text.
+ * a climb-back reads "B26->B3".
+ *
+ * Bank layout: the SRAM storage lives in BANK5 (bank_rank_*). BANK0 calls
+ * it only through the rank_read/rank_insert shims (bank_api.c), which
+ * marshal arguments through the RAM globals below — the BANK5 code itself
+ * touches nothing outside its bank.
  */
 #define RANK_N 6u
 
@@ -18,9 +22,17 @@ typedef struct {
     uint8_t  amulet;    /* 1 if the Amulet was obtained (climb-back form) */
 } rank_entry_t;
 
-/* Fill out[0..RANK_N-1]; returns how many rows are real (deepest != 0). */
-uint8_t rank_read(rank_entry_t *out);
-/* Insert a finished run, sorted by gold, keeping only the top RANK_N. */
-void    rank_insert(const rank_entry_t *e);
+/* BANK0 shims (bank_api.c) — the only entry points the game calls. */
+uint8_t rank_read(rank_entry_t *out);       /* fills out[]; returns count */
+void    rank_insert(const rank_entry_t *e); /* sorted by gold, top RANK_N */
+
+/* Marshalling globals (WRAM, reachable from any bank). */
+extern rank_entry_t g_rank_io[RANK_N];      /* bank_rank_read fills this */
+extern rank_entry_t g_rank_new;             /* bank_rank_insert reads this */
+extern uint8_t      g_rank_n;               /* bank_rank_read stores count */
+
+/* BANK5 entry functions (run via call_bank; self-contained). */
+void bank_rank_read(void);
+void bank_rank_insert(void);
 
 #endif
