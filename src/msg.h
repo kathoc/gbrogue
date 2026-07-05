@@ -30,7 +30,10 @@ void msg_refresh(void);
    nothing reads the log ring mid-processing. */
 void msgq_id(uint8_t sid);                    /* enqueue msg_post_id(sid) */
 void msgq_arg(uint8_t sid, const char *arg);  /* enqueue msg_postf(sid,arg) */
-void msgq_flush(void);                        /* post all queued, then clear */
+void msgq_str(const char *s);                 /* enqueue a raw msg_post(s) */
+void msgq_kill(uint8_t kind);                 /* enqueue combat_report_kill + gain_xp */
+void msgq_xp(uint16_t xp);                    /* enqueue a raw combat_gain_xp */
+void msgq_flush(void);                        /* replay all queued, then clear */
 
 /* Log ring access for the M9 log viewer. idx 0 = newest. Returns "" for
    empty slots. */

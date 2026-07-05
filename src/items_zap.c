@@ -81,15 +81,14 @@ static monster_t *ray_hit(int8_t dx, int8_t dy) {
 
 static void bolt_damage(monster_t *m, uint8_t dmg, const char *what) {
     uint8_t kind = m->kind;
-    /* Direct, NOT queued: this line must precede the kill / level-up lines
-       that combat renders immediately below. Queuing would flush it after
-       them and reverse the order. Cleaned up once combat is queue-aware. */
-    msg_post(what);
+    /* Queued in order: the bolt line, then (on a kill) the kill + level-up
+       lines. msgq preserves insertion order, so the pair stays correct and
+       nothing renders mid-processing once this runs in BANK2. */
+    msgq_str(what);
     render_flash_add(m->x, m->y, FLASH_HIT,
                      (uint8_t)(SPR_MON0 + (m - g_mons)));
     if (mon_damage(m, dmg)) {
-        combat_report_kill(kind);
-        combat_gain_xp(mkind(kind)->exp);   /* level-up line lands after */
+        msgq_kill(kind);
     }
 }
 
@@ -160,8 +159,7 @@ uint8_t items_zap(uint8_t slot) {
                 if (v->kind == MON_NONE) continue;
                 kind = v->kind;
                 if (mon_damage(v, d)) {
-                    combat_report_kill(kind);
-                    combat_gain_xp(mkind(kind)->exp);
+                    msgq_kill(kind);
                 }
             }
             msgq_id(SID_W_DRAIN);

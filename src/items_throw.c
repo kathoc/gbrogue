@@ -74,8 +74,7 @@ uint8_t items_throw(void) {
                 render_flash_add(m->x, m->y, FLASH_HIT,
                                  (uint8_t)(SPR_MON0 + (m - g_mons)));
                 if (mon_damage(m, dmg)) {
-                    combat_report_kill(kind);
-                    combat_gain_xp(mkind(kind)->exp);
+                    msgq_kill(kind);
                 } else {
                     msgq_id(SID_TH_HIT);
                 }

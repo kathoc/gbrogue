@@ -85,12 +85,11 @@ static uint8_t quaff(uint8_t slot) {
         msgq_id(SID_P_SEEMAGIC);
         break;
     case 8:  /* raise level */
-        /* Posted directly, NOT queued: combat_gain_xp renders its own
-           "welcome to level N" line immediately, and that line must land
-           after this one. Queuing SID_P_RAISE would flush it afterwards
-           and reverse the pair. (Cleaned up once combat is queue-aware.) */
-        msg_post_id(SID_P_RAISE);
-        combat_gain_xp((uint16_t)(g_level * 12u + 10u));
+        /* Both deferred so the pair stays ordered (P_RAISE then the
+           welcome-to-level line combat_gain_xp posts) and neither renders
+           mid-processing once this runs in BANK2. */
+        msgq_id(SID_P_RAISE);
+        msgq_xp((uint16_t)(g_level * 12u + 10u));
         break;
     case 9:  /* extra healing */
         heal(8);
