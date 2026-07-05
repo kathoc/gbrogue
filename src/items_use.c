@@ -23,7 +23,7 @@ static uint8_t eat(uint8_t slot) {
     g_food = (uint16_t)(g_food + add);
     if (g_food > 2000u) g_food = 2000u;
     if (g_food > 300u) g_hunger = 0;
-    msg_post_id(SID_YUM);
+    msgq_id(SID_YUM);
     inv_consume(slot);
     return 1;
 }
@@ -39,7 +39,7 @@ static void heal(uint8_t dice_sides) {
         g_hp = (uint8_t)(g_hp + h);
     }
     if (g_blind_t) g_blind_t = 0;
-    msg_post_id(SID_P_HEAL);
+    msgq_id(SID_P_HEAL);
 }
 
 static uint8_t quaff(uint8_t slot) {
@@ -50,41 +50,45 @@ static uint8_t quaff(uint8_t slot) {
     switch (sub) {
     case 0:  /* confusion */
         g_conf_t = (uint8_t)(12u + rng_range(8));
-        msg_post_id(SID_P_CONF);
+        msgq_id(SID_P_CONF);
         break;
     case 1:  /* hallucination */
         g_halluc_t = 120u;
-        msg_post_id(SID_P_HALLU);
+        msgq_id(SID_P_HALLU);
         break;
     case 2:  /* poison */
         if (effects_ring_worn(2u)) {          /* sustain strength */
-            msg_post_id(SID_P_SICK_M);
+            msgq_id(SID_P_SICK_M);
         } else {
             uint8_t loss = (uint8_t)(1u + rng_range(3));
             g_str = (g_str > (uint8_t)(loss + 3u)) ? (uint8_t)(g_str - loss) : 3u;
-            msg_post_id(SID_P_SICK);
+            msgq_id(SID_P_SICK);
         }
         break;
     case 3:  /* gain strength */
         if (g_str < 31u) g_str++;
         if (g_str > g_maxstr) g_maxstr = g_str;
-        msg_post_id(SID_P_STR);
+        msgq_id(SID_P_STR);
         break;
     case 4:  /* see invisible */
         g_seeinv_t = 200u;
-        msg_post_id(SID_P_SEEINV);
+        msgq_id(SID_P_SEEINV);
         break;
     case 5:  /* healing */
         heal(4);
         break;
     case 6:  /* monster detection */
         g_mondet_t = 60u;
-        msg_post_id(SID_P_SEEMON);
+        msgq_id(SID_P_SEEMON);
         break;
     case 7:  /* magic detection */
-        msg_post_id(SID_P_SEEMAGIC);
+        msgq_id(SID_P_SEEMAGIC);
         break;
     case 8:  /* raise level */
+        /* Posted directly, NOT queued: combat_gain_xp renders its own
+           "welcome to level N" line immediately, and that line must land
+           after this one. Queuing SID_P_RAISE would flush it afterwards
+           and reverse the pair. (Cleaned up once combat is queue-aware.) */
         msg_post_id(SID_P_RAISE);
         combat_gain_xp((uint16_t)(g_level * 12u + 10u));
         break;
@@ -93,19 +97,19 @@ static uint8_t quaff(uint8_t slot) {
         break;
     case 10: /* haste self */
         g_haste_t = (uint8_t)(10u + rng_range(10));
-        msg_post_id(SID_P_HASTE);
+        msgq_id(SID_P_HASTE);
         break;
     case 11: /* restore strength */
         g_str = g_maxstr;
-        msg_post_id(SID_P_FIXSTR);
+        msgq_id(SID_P_FIXSTR);
         break;
     case 12: /* blindness */
         g_blind_t = 120u;
-        msg_post_id(SID_P_BLIND);
+        msgq_id(SID_P_BLIND);
         break;
     default: /* levitation */
         g_levit_t = 30u;
-        msg_post_id(SID_P_LEVIT);
+        msgq_id(SID_P_LEVIT);
         break;
     }
     return 1;
@@ -119,7 +123,7 @@ static void magic_map(void) {
         for (x = 0; x < MAP_W; x++)
             if (map_terrain(x, y) != TI_BLANK)
                 map_set_flag(x, y, MF_EXPLORED);
-    msg_post_id(SID_S_MAP);
+    msgq_id(SID_S_MAP);
 }
 
 static void identify_something(void) {
@@ -138,11 +142,11 @@ static void identify_something(void) {
             char buf[32];
             char *p = item_name(buf, it);
             *p = 0;
-            msg_postf(SID_S_ID, buf);
+            msgq_arg(SID_S_ID, buf);
         }
         return;
     }
-    msg_post_id(SID_S_SMART);
+    msgq_id(SID_S_SMART);
 }
 
 static void spawn_one_adjacent(void) {
@@ -163,13 +167,13 @@ static void spawn_one_adjacent(void) {
                 g_mons[i].state = MST_AWAKE;
                 g_mons[i].eff = 0;
                 g_mons[i].eff_t = 0;
-                msg_post_id(SID_S_MAKEMON);
+                msgq_id(SID_S_MAKEMON);
                 return;
             }
         }
         break;
     }
-    msg_post_id(SID_S_GROWL);
+    msgq_id(SID_S_GROWL);
 }
 
 static void mons_apply_visible(uint8_t eff, uint8_t dur) {
@@ -183,11 +187,11 @@ static void mons_apply_visible(uint8_t eff, uint8_t dur) {
         n++;
     }
     if (!n) {
-        msg_post_id(SID_S_NOTHING);
+        msgq_id(SID_S_NOTHING);
     } else if (eff & MEF_HELD) {
-        msg_post_id(SID_S_HOLD);
+        msgq_id(SID_S_HOLD);
     } else {
-        msg_post_id(SID_S_FLEE);
+        msgq_id(SID_S_FLEE);
     }
 }
 
@@ -199,7 +203,7 @@ static uint8_t read_scroll(uint8_t slot) {
     switch (sub) {
     case 0:  /* confuse monster: your next hit confuses */
         combat_set_confuse_hit();
-        msg_post_id(SID_S_CONFHIT);
+        msgq_id(SID_S_CONFHIT);
         break;
     case 1:
         magic_map();
@@ -209,16 +213,16 @@ static uint8_t read_scroll(uint8_t slot) {
         break;
     case 3:  /* sleep */
         g_sleep_t = (uint8_t)(4u + rng_range(4));
-        msg_post_id(SID_S_SLEEP);
+        msgq_id(SID_S_SLEEP);
         break;
     case 4:  /* enchant armor */
         if (g_worn != SLOT_NONE) {
             g_pack[g_worn].ench++;
             g_pack[g_worn].flags &= (uint8_t)~IF_CURSED;
             g_ac = inv_player_ac();
-            msg_post_id(SID_S_ARMOR);
+            msgq_id(SID_S_ARMOR);
         } else {
-            msg_post_id(SID_S_SKIN);
+            msgq_id(SID_S_SKIN);
         }
         break;
     case 5:
@@ -228,19 +232,19 @@ static uint8_t read_scroll(uint8_t slot) {
         mons_apply_visible(MEF_FLEE, 15u);
         break;
     case 7:  /* food detection */
-        msg_post_id(SID_S_FOOD);
+        msgq_id(SID_S_FOOD);
         break;
     case 8:  /* teleportation */
         teleport_player();
-        msg_post_id(SID_S_TELE);
+        msgq_id(SID_S_TELE);
         break;
     case 9:  /* enchant weapon */
         if (g_wield != SLOT_NONE) {
             g_pack[g_wield].ench++;
             g_pack[g_wield].flags &= (uint8_t)~IF_CURSED;
-            msg_post_id(SID_S_WEAPON);
+            msgq_id(SID_S_WEAPON);
         } else {
-            msg_post_id(SID_S_SKIN);
+            msgq_id(SID_S_SKIN);
         }
         break;
     case 10:
@@ -252,7 +256,7 @@ static uint8_t read_scroll(uint8_t slot) {
             for (i = 0; i < PACK_SLOTS; i++)
                 g_pack[i].flags &= (uint8_t)~IF_CURSED;
         }
-        msg_post_id(SID_S_PROTECT);
+        msgq_id(SID_S_PROTECT);
         break;
     default: /* aggravate monsters */
         {
@@ -261,7 +265,7 @@ static uint8_t read_scroll(uint8_t slot) {
                 if (g_mons[i].kind != MON_NONE)
                     g_mons[i].state |= MST_AWAKE;
         }
-        msg_post_id(SID_S_ROAR);
+        msgq_id(SID_S_ROAR);
         break;
     }
     return 1;
@@ -286,7 +290,7 @@ uint8_t items_use(uint8_t slot) {
     case IK_RING:
         return inv_equip(slot);
     case IK_AMULET:
-        msg_post_id(SID_AMULET_GLOW);
+        msgq_id(SID_AMULET_GLOW);
         return 0;
     default:
         return 0;

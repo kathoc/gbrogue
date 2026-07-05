@@ -66,6 +66,43 @@ void msg_refresh(void) {
     if (last[0]) render_message(last);
 }
 
+/* --- deferred message queue --------------------------------------------
+   Enqueue is pure RAM (no render/lang), so banked logic may call it. The
+   single arg slot is enough because at most one arg-bearing message is
+   queued per flush cycle (only identify posts one). msgq_flush lives with
+   msg_post* in the fixed bank and does the actual rendering. */
+#define MSGQ_MAX 4
+static uint8_t mq_sid[MSGQ_MAX];
+static uint8_t mq_hasarg[MSGQ_MAX];
+static uint8_t mq_n;
+static char    mq_arg[LOG_COLS + 1];
+
+void msgq_id(uint8_t sid) {
+    if (mq_n >= MSGQ_MAX) return;          /* overflow guard (never hit) */
+    mq_sid[mq_n] = sid;
+    mq_hasarg[mq_n] = 0;
+    mq_n++;
+}
+
+void msgq_arg(uint8_t sid, const char *arg) {
+    uint8_t i = 0;
+    if (mq_n >= MSGQ_MAX) return;
+    while (arg[i] && i < LOG_COLS) { mq_arg[i] = arg[i]; i++; }
+    mq_arg[i] = 0;
+    mq_sid[mq_n] = sid;
+    mq_hasarg[mq_n] = 1;
+    mq_n++;
+}
+
+void msgq_flush(void) {
+    uint8_t i;
+    for (i = 0; i < mq_n; i++) {
+        if (mq_hasarg[i]) msg_postf(mq_sid[i], mq_arg);
+        else              msg_post_id(mq_sid[i]);
+    }
+    mq_n = 0;
+}
+
 const char *msg_log_line(uint8_t idx) {
     uint8_t slot;
     if (idx >= LOG_LINES) return "";

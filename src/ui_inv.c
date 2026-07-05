@@ -259,6 +259,7 @@ uint8_t ui_inv_show(void) {
                 if (act == 0u) {           /* primary action (use/equip/…) */
                     g_zap_prompted = 0;
                     turns = items_use(cursor);
+                    msgq_flush();  /* render deferred item-use messages */
                     /* aiming a wand traded the pack for the live world —
                        stay there even if the aim was cancelled */
                     if (turns || g_zap_prompted) break;
