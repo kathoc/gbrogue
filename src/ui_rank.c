@@ -24,13 +24,18 @@ void ui_rank_show(void) {
     render_clear_all();
     render_row(0, lang_str(n ? SID_RANK_TITLE : SID_RANK_EMPTY));
     for (i = 0; i < n; i++) {
-        /* "1 G1020 B17" — gold and the floor reached (the deepest>final
-           climb-back form returns once a later bank move frees HOME). */
+        /* "1 G1020 B26>B3" — gold, then floor: deepest>final once the
+           Amulet was taken (a climb-back run), else just the final. */
         char *p = buf;
         *p++ = (char)('1' + i);
         p = fmt_str(p, " G");
         p = fmt_u16(p, ent[i].gold);
         p = fmt_str(p, " B");
+        if (ent[i].amulet) {
+            p = fmt_u16(p, ent[i].deepest);
+            *p++ = '>';
+            *p++ = 'B';
+        }
         p = fmt_u16(p, ent[i].final);
         *p = 0;
         render_row((uint8_t)(2u + i * 2u), buf);

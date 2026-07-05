@@ -216,14 +216,24 @@ uint8_t ui_inv_show(void) {
             /* SELECT and B both just close — no more one-tap drops. */
             if (keys & (J_B | J_SELECT)) break;
             if (n && (keys & (J_UP | J_DOWN))) {
+                uint8_t old = cursor;
                 sfx_play(SFX_MENU);
                 /* wrap by hand — avoids an 8-bit %n division helper */
                 if (keys & J_UP)
                     cursor = cursor ? (uint8_t)(cursor - 1u) : (uint8_t)(n - 1u);
                 else
                     cursor = (uint8_t)(cursor + 1u) < n ? (uint8_t)(cursor + 1u) : 0u;
-                scroll_to(cursor);
-                draw_list(cursor);
+                /* Repaint only the two changed rows (+blurb) unless the
+                   window actually scrolled — a full render_clear_all on
+                   every step made the list flash. */
+                if (scroll_to(cursor)) {
+                    draw_list(cursor);
+                } else {
+                    draw_line(old, cursor);
+                    draw_line(cursor, cursor);
+                    draw_desc(cursor, n);
+                    render_present();
+                }
             }
             if (n && (keys & J_A)) {
                 /* open the 3-option action menu for the highlighted item */
