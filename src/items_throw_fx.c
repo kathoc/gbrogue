@@ -27,6 +27,17 @@ uint8_t g_throw_slot, g_throw_bonus;
 int8_t  g_throw_dx, g_throw_dy;
 uint8_t g_throw_turns;
 
+/* Index of m within g_mons via pointer increments only: `m - g_mons` would
+   divide by sizeof(monster_t) (7), and that divide helper is in bank 1 —
+   unreachable from BANK2. Same value. */
+static uint8_t mon_index(const monster_t *m) {
+    uint8_t i;
+    const monster_t *p = g_mons;
+    for (i = 0; i < MAX_MONSTERS; i++, p++)
+        if (p == m) return i;
+    return 0;
+}
+
 /* call_bank(2, ...) entry: reads the marshalled aim, flies the shot. */
 void bank_throw_effect(void) {
     uint8_t slot = g_throw_slot, bonus = g_throw_bonus;
@@ -54,7 +65,7 @@ void bank_throw_effect(void) {
                                     + (ammo->ench > 0 ? ammo->ench : 0));
             m->state |= MST_AWAKE;
             render_flash_add(m->x, m->y, FLASH_HIT,
-                             (uint8_t)(SPR_MON0 + (m - g_mons)));
+                             (uint8_t)(SPR_MON0 + mon_index(m)));
             if (mon_damage(m, dmg)) {
                 msgq_kill(kind);
             } else {

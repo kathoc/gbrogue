@@ -32,6 +32,18 @@ uint8_t g_zap_slot;
 int8_t  g_zap_dx, g_zap_dy;
 uint8_t g_zap_turns;
 
+/* Index of m within g_mons, computed with pointer increments only — the
+   natural `m - g_mons` compiles to a divide by sizeof(monster_t) (7, not a
+   power of two), and that divide helper lives in bank 1: unreachable from
+   here in BANK2. Value is identical. */
+static uint8_t mon_index(const monster_t *m) {
+    uint8_t i;
+    const monster_t *p = g_mons;
+    for (i = 0; i < MAX_MONSTERS; i++, p++)
+        if (p == m) return i;
+    return 0;
+}
+
 static monster_t *ray_hit(int8_t dx, int8_t dy) {
     uint8_t x = g_px, y = g_py;
     uint8_t range;
@@ -53,7 +65,7 @@ static void bolt_damage(monster_t *m, uint8_t dmg, const char *what) {
        (while BANK2 is mapped), so nothing renders mid-processing. */
     msgq_str(what);
     render_flash_add(m->x, m->y, FLASH_HIT,
-                     (uint8_t)(SPR_MON0 + (m - g_mons)));
+                     (uint8_t)(SPR_MON0 + mon_index(m)));
     if (mon_damage(m, dmg)) {
         msgq_kill(kind);
     }
