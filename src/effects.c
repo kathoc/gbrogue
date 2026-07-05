@@ -85,13 +85,16 @@ static void hunger_turn(void) {
     else g_hunger = 3;
 
     if (g_hunger != old_state) {
-        if (g_hunger == 1u) msg_post_id(SID_H_HUNGRY);
-        else if (g_hunger == 2u) msg_post_id(SID_H_WEAK);
-        else if (g_hunger == 3u) msg_post_id(SID_H_FAINT);
+        if (g_hunger == 1u) msgq_id(SID_H_HUNGRY);
+        else if (g_hunger == 2u) msgq_id(SID_H_WEAK);
+        else if (g_hunger == 3u) msgq_id(SID_H_FAINT);
     }
     if (g_food == 0) {
-        msg_post_id(SID_H_STARVE);
+        msgq_id(SID_H_STARVE);
         g_hp = 0;
+        /* msg_death only records the death cause (no render), so it can
+           stay a direct call for now; the orchestrator flush renders the
+           queued STARVE line before the caller returns on g_hp == 0. */
         msg_death(SID_DEATH_STARVE, 0);
     }
 }
@@ -113,7 +116,7 @@ void effects_turn(void) {
     if (effects_ring_worn(RS_REGEN) && g_hp < g_maxhp) g_hp++;
     if (effects_ring_worn(RS_SEARCH)) traps_search();
     if (effects_ring_worn(RS_TELEPORT) && rng_byte() < 5u) {
-        msg_post_id(SID_S_TELE);
+        msgq_id(SID_S_TELE);
         teleport_player();
     }
     /* add strength ring: applied live to the stat while worn */

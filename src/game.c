@@ -409,6 +409,7 @@ static void after_player_turn(void) {
     }
     if (!g_hp) return;
     effects_turn();
+    msgq_flush();  /* render deferred upkeep messages (before death-return) */
     if (!g_hp) return;
     if (g_hp < g_maxhp && (g_turns % REGEN_PERIOD) == 0u)
         g_hp++;
