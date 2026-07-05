@@ -16,4 +16,15 @@ extern uint8_t g_zap_prompted;
    directions together for a diagonal. */
 uint8_t items_prompt_dir(int8_t *dx, int8_t *dy);
 
+/* --- BANK2 relocation ---
+   The post-aim wand effect lives in items_zap_fx.c (#pragma bank 2),
+   reached only through items_zap(), which marshals the aim into these
+   WRAM globals and hops in via call_bank(2, bank_zap_effect). All of the
+   effect's callees were relocated into bank 0 first (msgq, mkind/
+   monster_roll_hp, render_flash_add) so the banked code can reach them. */
+extern uint8_t g_zap_slot;
+extern int8_t  g_zap_dx, g_zap_dy;
+extern uint8_t g_zap_turns;
+void bank_zap_effect(void);   /* BANK2 entry — run via call_bank only */
+
 #endif

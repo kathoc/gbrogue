@@ -1,4 +1,5 @@
 #include <gb/gb.h>
+#include "bankcall.h"
 #include "items_zap.h"
 #include "items.h"
 #include "inventory.h"
@@ -65,142 +66,10 @@ uint8_t items_prompt_dir(int8_t *dx, int8_t *dy) {
     return picked;
 }
 
-static monster_t *ray_hit(int8_t dx, int8_t dy) {
-    uint8_t x = g_px, y = g_py;
-    uint8_t range;
-    for (range = 0; range < 24u; range++) {
-        monster_t *m;
-        x = (uint8_t)(x + dx);
-        y = (uint8_t)(y + dy);
-        if (!map_walkable(x, y) && map_terrain(x, y) != TI_DOOR) return 0;
-        m = mon_at(x, y);
-        if (m) return m;
-    }
-    return 0;
-}
-
-static void bolt_damage(monster_t *m, uint8_t dmg, const char *what) {
-    uint8_t kind = m->kind;
-    /* Queued in order: the bolt line, then (on a kill) the kill + level-up
-       lines. msgq preserves insertion order, so the pair stays correct and
-       nothing renders mid-processing once this runs in BANK2. */
-    msgq_str(what);
-    render_flash_add(m->x, m->y, FLASH_HIT,
-                     (uint8_t)(SPR_MON0 + (m - g_mons)));
-    if (mon_damage(m, dmg)) {
-        msgq_kill(kind);
-    }
-}
-
-/* Post-aim wand effect: pure logic (no UI/input), so this is the unit that
-   moves to BANK2 in Phase 3. The aiming prompt stays in items_zap below. */
-static uint8_t zap_effect(uint8_t slot, int8_t dx, int8_t dy) {
-    item_t *it = &g_pack[slot];
-    monster_t *m;
-
-    it->qty--;                       /* charges live in qty */
-    identify_learn(IDC_WAND, it->sub);
-
-    m = ray_hit(dx, dy);
-
-    switch (it->sub) {
-    case 0:  /* light */
-        msgq_id(SID_W_GLOW);
-        break;
-    case 1:  /* invisibility */
-        if (m) { m->eff |= MEF_INVIS; msgq_id(SID_W_VANISH); }
-        else msgq_id(SID_S_NOTHING);
-        break;
-    case 2:  /* lightning */
-        if (m) bolt_damage(m, rng_dice(6, 6), "A bolt of lightning!");
-        else msgq_id(SID_W_FIZZLE);
-        break;
-    case 3:  /* fire */
-        if (m) bolt_damage(m, rng_dice(6, 6), "A burst of flame!");
-        else msgq_id(SID_W_FIZZLE);
-        break;
-    case 4:  /* cold */
-        if (m) bolt_damage(m, rng_dice(6, 6), "An icy blast!");
-        else msgq_id(SID_W_FIZZLE);
-        break;
-    case 5:  /* polymorph */
-        if (m) {
-            m->kind = rng_range(MKIND_COUNT);
-            m->hp = monster_roll_hp(m->kind);
-            m->state |= MST_AWAKE;
-            msgq_id(SID_W_POLY);
-        } else msgq_id(SID_S_NOTHING);
-        break;
-    case 6:  /* magic missile — always hits */
-        if (m) bolt_damage(m, rng_dice(1, 4), "A magic missile!");
-        else msgq_id(SID_W_FIZZLE);
-        break;
-    case 7:  /* haste monster */
-        if (m) { m->eff |= MEF_HASTE; m->state |= MST_AWAKE; msgq_id(SID_W_HASTE); }
-        else msgq_id(SID_S_NOTHING);
-        break;
-    case 8:  /* slow monster */
-        if (m) { m->eff |= MEF_SLOW; msgq_id(SID_W_SLOW); }
-        else msgq_id(SID_S_NOTHING);
-        break;
-    case 9:  /* drain life: half your HP hits every visible monster */
-        if (g_hp > 1u) {
-            uint8_t d = (uint8_t)(g_hp / 2u);
-            uint8_t i;
-            g_hp = (uint8_t)(g_hp - d);
-            for (i = 0; i < MAX_MONSTERS; i++) {
-                monster_t *v = &g_mons[i];
-                uint8_t kind;
-                if (v->kind == MON_NONE) continue;
-                kind = v->kind;
-                if (mon_damage(v, d)) {
-                    msgq_kill(kind);
-                }
-            }
-            msgq_id(SID_W_DRAIN);
-        } else msgq_id(SID_W_WEAK);
-        break;
-    case 10: /* nothing */
-        msgq_id(SID_S_NOTHING);
-        break;
-    case 11: /* teleport away */
-        if (m) {
-            uint8_t t;
-            for (t = 0; t < 100u; t++) {
-                uint8_t x = rng_range(MAP_W), y = rng_range(MAP_H);
-                if (!map_walkable(x, y) || mon_at(x, y)) continue;
-                if (x == g_px && y == g_py) continue;
-                m->x = x; m->y = y;
-                break;
-            }
-            msgq_id(SID_W_AWAY);
-        } else msgq_id(SID_S_NOTHING);
-        break;
-    case 12: /* teleport to */
-        if (m) {
-            uint8_t t;
-            for (t = 0; t < 12u; t++) {
-                uint8_t x = (uint8_t)(g_px - 1u + rng_range(3));
-                uint8_t y = (uint8_t)(g_py - 1u + rng_range(3));
-                if ((x == g_px && y == g_py) || !map_walkable(x, y)) continue;
-                if (mon_at(x, y)) continue;
-                m->x = x; m->y = y;
-                m->state |= MST_AWAKE;
-                break;
-            }
-            msgq_id(SID_W_TO);
-        } else msgq_id(SID_S_NOTHING);
-        break;
-    default: /* cancellation */
-        if (m) { m->eff = 0; msgq_id(SID_W_DULL); }
-        else msgq_id(SID_S_NOTHING);
-        break;
-    }
-    return 1;
-}
-
 /* UI orchestrator (stays in the fixed bank): charge check, then aim on the
-   live world (rule 4 input-wait), then hand off to the banked effect. */
+   live world (rule 4 input-wait), then marshal the aim and hop into BANK2
+   for the effect (items_zap_fx.c). msgq_flush in the caller (ui_inv) then
+   replays the queued messages/kills the banked effect recorded. */
 uint8_t items_zap(uint8_t slot) {
     item_t *it = &g_pack[slot];
     int8_t dx, dy;
@@ -211,5 +80,9 @@ uint8_t items_zap(uint8_t slot) {
         return 1;
     }
     if (!items_prompt_dir(&dx, &dy)) return 0;
-    return zap_effect(slot, dx, dy);
+    g_zap_slot = slot;
+    g_zap_dx = dx;
+    g_zap_dy = dy;
+    call_bank(2u, bank_zap_effect);
+    return g_zap_turns;
 }
