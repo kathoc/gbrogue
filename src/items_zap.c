@@ -28,7 +28,7 @@ uint8_t items_prompt_dir(int8_t *dx, int8_t *dy) {
     uint8_t picked = 0;
     g_zap_prompted = 1;
     view_world_enter();
-    msg_post_id(SID_W_WHICHWAY);
+    msg_post_id(SID_W_WHICHWAY);   /* UI prompt (rule 4): render live, not queued */
     g_status_hint = SID_HINT_CANCEL;
     status_update();
     msg_refresh();
@@ -81,6 +81,9 @@ static monster_t *ray_hit(int8_t dx, int8_t dy) {
 
 static void bolt_damage(monster_t *m, uint8_t dmg, const char *what) {
     uint8_t kind = m->kind;
+    /* Direct, NOT queued: this line must precede the kill / level-up lines
+       that combat renders immediately below. Queuing would flush it after
+       them and reverse the order. Cleaned up once combat is queue-aware. */
     msg_post(what);
     render_flash_add(m->x, m->y, FLASH_HIT,
                      (uint8_t)(SPR_MON0 + (m - g_mons)));
@@ -96,7 +99,7 @@ uint8_t items_zap(uint8_t slot) {
     monster_t *m;
 
     if (it->qty == 0) {
-        msg_post_id(SID_S_NOTHING);
+        msgq_id(SID_S_NOTHING);
         identify_learn(IDC_WAND, it->sub);
         return 1;
     }
@@ -108,43 +111,43 @@ uint8_t items_zap(uint8_t slot) {
 
     switch (it->sub) {
     case 0:  /* light */
-        msg_post_id(SID_W_GLOW);
+        msgq_id(SID_W_GLOW);
         break;
     case 1:  /* invisibility */
-        if (m) { m->eff |= MEF_INVIS; msg_post_id(SID_W_VANISH); }
-        else msg_post_id(SID_S_NOTHING);
+        if (m) { m->eff |= MEF_INVIS; msgq_id(SID_W_VANISH); }
+        else msgq_id(SID_S_NOTHING);
         break;
     case 2:  /* lightning */
         if (m) bolt_damage(m, rng_dice(6, 6), "A bolt of lightning!");
-        else msg_post_id(SID_W_FIZZLE);
+        else msgq_id(SID_W_FIZZLE);
         break;
     case 3:  /* fire */
         if (m) bolt_damage(m, rng_dice(6, 6), "A burst of flame!");
-        else msg_post_id(SID_W_FIZZLE);
+        else msgq_id(SID_W_FIZZLE);
         break;
     case 4:  /* cold */
         if (m) bolt_damage(m, rng_dice(6, 6), "An icy blast!");
-        else msg_post_id(SID_W_FIZZLE);
+        else msgq_id(SID_W_FIZZLE);
         break;
     case 5:  /* polymorph */
         if (m) {
             m->kind = rng_range(MKIND_COUNT);
             m->hp = monster_roll_hp(m->kind);
             m->state |= MST_AWAKE;
-            msg_post_id(SID_W_POLY);
-        } else msg_post_id(SID_S_NOTHING);
+            msgq_id(SID_W_POLY);
+        } else msgq_id(SID_S_NOTHING);
         break;
     case 6:  /* magic missile — always hits */
         if (m) bolt_damage(m, rng_dice(1, 4), "A magic missile!");
-        else msg_post_id(SID_W_FIZZLE);
+        else msgq_id(SID_W_FIZZLE);
         break;
     case 7:  /* haste monster */
-        if (m) { m->eff |= MEF_HASTE; m->state |= MST_AWAKE; msg_post_id(SID_W_HASTE); }
-        else msg_post_id(SID_S_NOTHING);
+        if (m) { m->eff |= MEF_HASTE; m->state |= MST_AWAKE; msgq_id(SID_W_HASTE); }
+        else msgq_id(SID_S_NOTHING);
         break;
     case 8:  /* slow monster */
-        if (m) { m->eff |= MEF_SLOW; msg_post_id(SID_W_SLOW); }
-        else msg_post_id(SID_S_NOTHING);
+        if (m) { m->eff |= MEF_SLOW; msgq_id(SID_W_SLOW); }
+        else msgq_id(SID_S_NOTHING);
         break;
     case 9:  /* drain life: half your HP hits every visible monster */
         if (g_hp > 1u) {
@@ -161,11 +164,11 @@ uint8_t items_zap(uint8_t slot) {
                     combat_gain_xp(mkind(kind)->exp);
                 }
             }
-            msg_post_id(SID_W_DRAIN);
-        } else msg_post_id(SID_W_WEAK);
+            msgq_id(SID_W_DRAIN);
+        } else msgq_id(SID_W_WEAK);
         break;
     case 10: /* nothing */
-        msg_post_id(SID_S_NOTHING);
+        msgq_id(SID_S_NOTHING);
         break;
     case 11: /* teleport away */
         if (m) {
@@ -177,8 +180,8 @@ uint8_t items_zap(uint8_t slot) {
                 m->x = x; m->y = y;
                 break;
             }
-            msg_post_id(SID_W_AWAY);
-        } else msg_post_id(SID_S_NOTHING);
+            msgq_id(SID_W_AWAY);
+        } else msgq_id(SID_S_NOTHING);
         break;
     case 12: /* teleport to */
         if (m) {
@@ -192,12 +195,12 @@ uint8_t items_zap(uint8_t slot) {
                 m->state |= MST_AWAKE;
                 break;
             }
-            msg_post_id(SID_W_TO);
-        } else msg_post_id(SID_S_NOTHING);
+            msgq_id(SID_W_TO);
+        } else msgq_id(SID_S_NOTHING);
         break;
     default: /* cancellation */
-        if (m) { m->eff = 0; msg_post_id(SID_W_DULL); }
-        else msg_post_id(SID_S_NOTHING);
+        if (m) { m->eff = 0; msgq_id(SID_W_DULL); }
+        else msgq_id(SID_S_NOTHING);
         break;
     }
     return 1;
