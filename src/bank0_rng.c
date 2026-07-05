@@ -1,4 +1,11 @@
 #include "rng.h"
+/*
+ * NOTE: filename is deliberately early-sorting so the linker places this
+ * translation unit in BANK0 (the fixed, always-mapped 16KB). rng must be
+ * reachable from banked code (BANK2/3 items & monsters call it), and a
+ * banked caller can only reach BANK0 or its own bank. Self-contained LCG.
+ */
+
 
 static uint16_t s;
 
