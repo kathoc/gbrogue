@@ -53,8 +53,12 @@ void bank_rank_insert(void) {
     for (i = 0; i < RANK_N; i++)
         if (!t[i].deepest || g_rank_new.gold > t[i].gold) { pos = i; break; }
     if (pos < RANK_N) {
-        for (i = (uint8_t)(RANK_N - 1u); i > pos; i--) t[i] = t[i - 1u];
-        t[pos] = g_rank_new;
+        /* Shift down + insert with byte copies, NOT struct assignment:
+           a struct '=' compiles to a memcpy call, and memcpy lives in
+           another bank — calling it here (BANK5 mapped) would crash. */
+        for (i = (uint8_t)(RANK_N - 1u); i > pos; i--)
+            copy((uint8_t *)&t[i], (const uint8_t *)&t[i - 1u], ESZ);
+        copy((uint8_t *)&t[pos], (const uint8_t *)&g_rank_new, ESZ);
         copy(RB + HDR, (const uint8_t *)t, (uint8_t)(RANK_N * ESZ));
     }
     DISABLE_RAM;
