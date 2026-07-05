@@ -114,6 +114,7 @@ uint8_t ui_menu_show(void) {
                 uint8_t t;
                 restore_world();
                 t = items_throw();
+                msgq_flush();  /* render deferred throw messages */
                 view_sync_sprites();
                 status_update();
                 render_present();

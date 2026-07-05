@@ -43,7 +43,7 @@ uint8_t items_throw(void) {
     uint8_t bonus, slot = find_ammo(&bonus);
 
     if (slot == SLOT_NONE) {
-        msg_post_id(SID_TH_NOTHING);
+        msgq_id(SID_TH_NOTHING);
         return 0;
     }
     if (!items_prompt_dir(&dx, &dy)) return 0;
@@ -77,14 +77,14 @@ uint8_t items_throw(void) {
                     combat_report_kill(kind);
                     combat_gain_xp(mkind(kind)->exp);
                 } else {
-                    msg_post_id(SID_TH_HIT);
+                    msgq_id(SID_TH_HIT);
                 }
             } else {
                 m->state |= MST_AWAKE;
-                msg_post_id(SID_TH_MISS);
+                msgq_id(SID_TH_MISS);
             }
         } else {
-            msg_post_id(SID_TH_CLATTER);
+            msgq_id(SID_TH_CLATTER);
         }
     }
     inv_consume(slot);
