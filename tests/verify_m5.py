@@ -7,7 +7,12 @@ is cross-checked for monster glyph rendering.
 """
 from collections import deque
 
-from gbtest import GB, Failure
+from gbtest import GB, Failure, ROOT
+
+# Monsters/combat depend on the new-game seed; the release build draws it
+# from DIV-based entropy (shifts with boot timing). Use the debug ROM,
+# which pins the seed (src/ui_title.c GBR_DEBUG_KIT), for a stable field.
+DBG_ROM = ROOT / "build" / "dbg" / "gbrogue.gb"
 
 MAP_W, MAP_H = 32, 28
 MF_TERRAIN = 0x1F
@@ -74,7 +79,7 @@ def step_toward(gb, grid, target, blocked, max_steps=400):
 
 
 def main() -> int:
-    gb = GB()
+    gb = GB(rom=DBG_ROM)
     gb.boot_game()
 
     grid = read_map(gb)

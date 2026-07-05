@@ -15,6 +15,16 @@
 /* Own translation unit: heavy render_text call sites must stay out of
    game.c (SDCC layout constraint, docs/architecture.md). */
 
+/* The new-game RNG seed is normally DIV-based entropy so every run is
+   different. That makes map-dependent tests (m2m4/m5) fragile: any change
+   to boot timing shifts the seed and thus the first map, so an unrelated
+   edit can hand the player a deadly or disconnected level. The debug build
+   pins the seed instead, giving those tests a stable map. Overridable via
+   -DGBR_TEST_SEED=... if a future map assertion needs a different level. */
+#ifndef GBR_TEST_SEED
+#define GBR_TEST_SEED 0x1D2Du
+#endif
+
 /* Menu items stack up from the art's blank band, LANGUAGE always last
    (its ASCII label stays readable in either language). With a save
    present the list is CONTINUE / NEW / RANKING / LANGUAGE, otherwise
@@ -133,7 +143,11 @@ uint8_t ui_title_show(void) {
             {
                 uint8_t cont = (uint8_t)(s_can && sel == 0u);
                 if (!cont)
+#ifdef GBR_DEBUG_KIT
+                    rng_seed(GBR_TEST_SEED);   /* stable maps for the suite */
+#else
                     rng_seed((uint16_t)(((uint16_t)DIV_REG << 8) | frames));
+#endif
                 render_fade_out(FADE_OUT_FRAMES);
                 render_art_end();
                 return cont;

@@ -9,7 +9,13 @@ the player along a BFS path computed in Python.
 """
 from collections import deque
 
-from gbtest import GB, Failure
+from gbtest import GB, Failure, ROOT
+
+# Map generation depends on the new-game seed, which the release build
+# draws from DIV-based entropy — so it shifts with any boot-timing change
+# and could hand this walk a deadly/disconnected level. Run against the
+# debug ROM, which pins the seed (src/ui_title.c GBR_DEBUG_KIT).
+DBG_ROM = ROOT / "build" / "dbg" / "gbrogue.gb"
 
 MAP_W, MAP_H = 32, 28
 MF_TERRAIN = 0x1F
@@ -50,7 +56,7 @@ def bfs_path(grid, start, goal):
 
 
 def main() -> int:
-    gb = GB()
+    gb = GB(rom=DBG_ROM)
     gb.boot_game()
 
     grid = read_map(gb)
@@ -149,7 +155,7 @@ def main() -> int:
 
     # --- M4: same seed => identical map on reboot
     gb.stop()
-    gb2 = GB()
+    gb2 = GB(rom=DBG_ROM)
     gb2.boot_game()
     gb.expect(read_map(gb2) is not None, "reboot failed")
     same = all((grid[y][x] & MF_TERRAIN) == (read_map(gb2)[y][x] & MF_TERRAIN)
