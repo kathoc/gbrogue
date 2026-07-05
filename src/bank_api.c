@@ -1,6 +1,9 @@
 #include <gb/gb.h>
 #include "bankcall.h"
 #include "rank.h"
+#include "save.h"
+#include "rng.h"
+#include "worldview.h"
 
 /*
  * BANK0 shims for banked subsystems. These stay pinned in the fixed bank
@@ -22,4 +25,29 @@ uint8_t rank_read(rank_entry_t *out) {
 void rank_insert(const rank_entry_t *e) {
     g_rank_new = *e;
     call_bank(5u, bank_rank_insert);
+}
+
+/* --- suspend save (BANK5) --- */
+
+uint8_t save_exists(void) {
+    call_bank(5u, bank_save_exists);
+    return g_save_ok;
+}
+
+void save_write(void) {
+    g_save_rng = rng_state();          /* rng lives in BANK1 — read it here */
+    call_bank(5u, bank_save_write);
+}
+
+uint8_t save_load(void) {
+    call_bank(5u, bank_save_exists);
+    if (!g_save_ok) return 0;
+    call_bank(5u, bank_save_load);
+    rng_seed(g_save_rng);              /* reseed + repaint from BANK0 */
+    view_player_moved();
+    return 1;
+}
+
+void save_invalidate(void) {
+    call_bank(5u, bank_save_invalidate);
 }

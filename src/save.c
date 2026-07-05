@@ -1,5 +1,5 @@
 #include <gb/gb.h>
-#include <string.h>
+#pragma bank 5
 #include "save.h"
 #include "world.h"
 #include "map.h"
@@ -8,9 +8,13 @@
 #include "inventory.h"
 #include "identify.h"
 #include "traps.h"
-#include "rng.h"
-#include "worldview.h"
 
+/*
+ * BANK5. Suspend save serialisation. Self-contained: SRAM is copied
+ * byte-by-byte (no memcpy — it lives in another bank) and the rng /
+ * view calls the old code made are done by the BANK0 shims instead, so
+ * nothing here reaches outside BANK5 while it is mapped.
+ */
 #define SRAM ((uint8_t *)0xA000)
 #define SAVE_MAGIC 0x47u          /* 'G' */
 #define SAVE_VER   3u
@@ -19,23 +23,23 @@
 extern uint8_t  g_id_alias[4][14];
 extern uint16_t g_id_known[4];
 
-/*
- * Header: magic, version, 16-bit checksum, 16-bit length.
- * Payload: fixed-order chunks below. Everything is plain bytes; the
- * same code runs both directions via OP_SAVE / OP_LOAD.
- */
+uint16_t g_save_rng;
+uint8_t  g_save_ok;
 
 static uint16_t cursor;
 static uint8_t  op_load;
 
+/* byte copy to/from SRAM (no memcpy — that would be a cross-bank call) */
 static void chunk(void *p, uint16_t len) {
-    if (op_load) memcpy(p, SRAM + cursor, len);
-    else memcpy(SRAM + cursor, p, len);
-    cursor += len;
+    uint8_t *pp = (uint8_t *)p;
+    uint16_t i;
+    if (op_load)
+        for (i = 0; i < len; i++) pp[i] = SRAM[cursor + i];
+    else
+        for (i = 0; i < len; i++) SRAM[cursor + i] = pp[i];
+    cursor = (uint16_t)(cursor + len);
 }
 
-/* Chunk table: one row per saved field (much smaller than a call per
-   field). Order is the wire format — append only. */
 typedef struct { void *p; uint16_t len; } chunk_row_t;
 static const chunk_row_t CHUNKS[] = {
     { &g_px, 1 }, { &g_py, 1 }, { &g_depth, 1 },
@@ -67,16 +71,12 @@ static const chunk_row_t CHUNKS[] = {
 };
 #define N_CHUNKS (sizeof(CHUNKS) / sizeof(CHUNKS[0]))
 
+/* rng state rides in g_save_rng (set by the BANK0 shim on save; read back
+   there to reseed on load) so this stays out of the rng module. */
 static void serialize(void) {
-    uint16_t rs;
     uint8_t i;
-
     cursor = 6;                    /* skip header */
-
-    rs = rng_state();
-    chunk(&rs, 2);
-    if (op_load) rng_seed(rs);
-
+    chunk(&g_save_rng, 2);
     for (i = 0; i < N_CHUNKS; i++)
         chunk(CHUNKS[i].p, CHUNKS[i].len);
 }
@@ -87,21 +87,19 @@ static uint16_t checksum(uint16_t len) {
     return sum;
 }
 
-uint8_t save_exists(void) {
-    uint8_t ok;
+void bank_save_exists(void) {
     ENABLE_RAM;
     if (SRAM[0] == SAVE_MAGIC && SRAM[1] == SAVE_VER) {
         uint16_t len = (uint16_t)(SRAM[4] | ((uint16_t)SRAM[5] << 8));
         uint16_t sum = (uint16_t)(SRAM[2] | ((uint16_t)SRAM[3] << 8));
-        ok = (len > 6u && len < 0x2000u && checksum(len) == sum);
+        g_save_ok = (uint8_t)(len > 6u && len < 0x2000u && checksum(len) == sum);
     } else {
-        ok = 0;
+        g_save_ok = 0;
     }
     DISABLE_RAM;
-    return ok;
 }
 
-void save_write(void) {
+void bank_save_write(void) {
     uint16_t sum;
     ENABLE_RAM;
     op_load = 0;
@@ -116,23 +114,15 @@ void save_write(void) {
     DISABLE_RAM;
 }
 
-uint8_t save_load(void) {
-    if (!save_exists()) return 0;
+void bank_save_load(void) {
     ENABLE_RAM;
     op_load = 1;
-    serialize();
-    /* No consume-on-load anymore: the game autosaves every step, so
-       there is never an older snapshot to scum back to. Death and
-       victory still wipe the save. */
+    serialize();               /* reads the saved rng into g_save_rng */
     DISABLE_RAM;
-    view_player_moved();
-    return 1;
 }
 
-void save_invalidate(void) {
+void bank_save_invalidate(void) {
     ENABLE_RAM;
     SRAM[0] = 0;
     DISABLE_RAM;
 }
-
-/* Best-run records were replaced by the persistent ranking (rank.c). */
