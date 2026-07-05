@@ -92,17 +92,12 @@ static void bolt_damage(monster_t *m, uint8_t dmg, const char *what) {
     }
 }
 
-uint8_t items_zap(uint8_t slot) {
+/* Post-aim wand effect: pure logic (no UI/input), so this is the unit that
+   moves to BANK2 in Phase 3. The aiming prompt stays in items_zap below. */
+static uint8_t zap_effect(uint8_t slot, int8_t dx, int8_t dy) {
     item_t *it = &g_pack[slot];
-    int8_t dx, dy;
     monster_t *m;
 
-    if (it->qty == 0) {
-        msgq_id(SID_S_NOTHING);
-        identify_learn(IDC_WAND, it->sub);
-        return 1;
-    }
-    if (!items_prompt_dir(&dx, &dy)) return 0;
     it->qty--;                       /* charges live in qty */
     identify_learn(IDC_WAND, it->sub);
 
@@ -202,4 +197,19 @@ uint8_t items_zap(uint8_t slot) {
         break;
     }
     return 1;
+}
+
+/* UI orchestrator (stays in the fixed bank): charge check, then aim on the
+   live world (rule 4 input-wait), then hand off to the banked effect. */
+uint8_t items_zap(uint8_t slot) {
+    item_t *it = &g_pack[slot];
+    int8_t dx, dy;
+
+    if (it->qty == 0) {
+        msgq_id(SID_S_NOTHING);
+        identify_learn(IDC_WAND, it->sub);
+        return 1;
+    }
+    if (!items_prompt_dir(&dx, &dy)) return 0;
+    return zap_effect(slot, dx, dy);
 }
