@@ -303,6 +303,10 @@ class GB:
             self.pb.memory[a + 5] = ench
             self.pb.memory[a + 6] = flags
             slot += 1
+        # short hunger fuse for the M7 hunger check (was set on-cart)
+        fa = self.addr("g_food")
+        self.pb.memory[fa] = 340 & 0xFF
+        self.pb.memory[fa + 1] = (340 >> 8) & 0xFF
 
     # ------------------------------------------------------------ asserts
     def expect(self, cond: bool, why: str) -> None:

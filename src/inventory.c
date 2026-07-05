@@ -203,13 +203,10 @@ void inv_starting_kit(void) {
     it.kind = IK_WEAPON; it.sub = 3; it.qty = 25;               /* arrows */
     inv_add(&it);
 
-#ifdef GBR_DEBUG_KIT
-    /* Short hunger fuse for the M7 hunger check. The deterministic test
-       items themselves are no longer built here — verify_m7 injects them
-       straight into g_pack after boot (keeps this out of the packed HOME
-       bank; the on-cart debug build otherwise overflows into VRAM). */
-    g_food = 340u;
-#endif
+    /* The debug ROM used to build a test kit + short hunger fuse here;
+       both are now injected by verify_m7/m9 after boot (gbtest.py
+       inject_debug_kit), so the debug build is byte-identical to the
+       release build and no longer nudges HOME over 0x8000. */
 
     g_ac = inv_player_ac();
 }
