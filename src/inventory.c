@@ -57,7 +57,14 @@ void inv_compact(void) {
     for (r = 0; r < PACK_SLOTS; r++) {
         if (g_pack[r].kind == ITEM_NONE) continue;
         if (r != w) {
-            g_pack[w] = g_pack[r];
+            /* Byte copy, NOT struct '=': a struct assignment compiles to a
+               memcpy call, and memcpy sits in a switchable bank — once this
+               code moves to BANK2 that call would crash (same reason as
+               rank.c). inv_consume() reaches here from banked item use. */
+            uint8_t bi;
+            uint8_t *d = (uint8_t *)&g_pack[w];
+            const uint8_t *s = (const uint8_t *)&g_pack[r];
+            for (bi = 0; bi < sizeof(item_t); bi++) d[bi] = s[bi];
             g_pack[r].kind = ITEM_NONE;
             g_pack[r].flags = 0;
             if (g_wield == r) g_wield = w;
