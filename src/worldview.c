@@ -185,13 +185,17 @@ static uint8_t aim_dir(int8_t dx, int8_t dy) {
 /* Show/hide the blinking aim cursor on the player's tile. (dx,dy) is the
    currently-selected direction; visible drives the blink. */
 void view_aim_cursor(int8_t dx, int8_t dy, uint8_t visible) {
+    /* Sit the big arrow on the tile ONE STEP toward the aim, not on the
+       hero — clear of the '@' and pointing at where the shot goes, so the
+       direction reads at a glance. */
+    int16_t cx, cy;
     if (!visible) {
         render_aim_hide();
         return;
     }
-    render_aim_cursor(aim_dir(dx, dy),
-                      (uint8_t)(g_px * 8u - SCX_REG),
-                      (uint8_t)(g_py * 8u - SCY_REG));
+    cx = (int16_t)(((int16_t)g_px + dx) * 8 - SCX_REG);
+    cy = (int16_t)(((int16_t)g_py + dy) * 8 - SCY_REG);
+    render_aim_cursor(aim_dir(dx, dy), (uint8_t)cx, (uint8_t)cy);
 }
 
 void view_sync_sprites(void) {
