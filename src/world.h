@@ -9,6 +9,7 @@
  * addressing.
  */
 extern uint8_t  g_px, g_py;        /* player world position */
+extern int8_t   g_last_dx, g_last_dy;  /* last step taken; auto-attack facing */
 extern uint8_t  g_depth;           /* dungeon level, 1-based */
 extern uint8_t  g_hp, g_maxhp;
 extern uint8_t  g_str, g_maxstr;

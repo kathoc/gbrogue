@@ -2,6 +2,7 @@
 #include "msg.h"
 
 uint8_t  g_px, g_py;
+int8_t   g_last_dx, g_last_dy;
 uint8_t  g_depth;
 uint8_t  g_hp, g_maxhp;
 uint8_t  g_str, g_maxstr;
@@ -40,6 +41,7 @@ void world_new(void) {
     g_death_cause[0] = 0;
     g_death_sid = 0;    /* no fatal blow yet (won runs keep this 0) */
     g_death_mon = 0;
+    g_last_dx = 0; g_last_dy = 0;   /* no facing until the first step */
     /* Rogue 5.4 opening stats. AC 8 = the starting ring mail. */
     g_depth = 1;
     g_hp = 12; g_maxhp = 12;

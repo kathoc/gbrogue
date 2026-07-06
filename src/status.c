@@ -78,8 +78,13 @@ void status_update(void) {
            what A does on this staircase */
         const char *hint;
         if (g_status_hint) hint = lang_str(g_status_hint);
-        else hint = lang_str(g_has_amulet ? SID_HINT_BOTH
-                                          : SID_HINT_DESCEND);
+        else if (g_has_amulet)
+            /* post-Amulet you may climb (B) or dive deeper (A); the row is
+               too narrow for both, so alternate ~1s each. B:up shows first.
+               play() redraws on each phase flip (g_play_frames bit 6). */
+            hint = lang_str((g_play_frames & 0x40u) ? SID_HINT_DESCEND
+                                                    : SID_HINT_ASCEND);
+        else hint = lang_str(SID_HINT_DESCEND);
         uint8_t used, want;
         *p = 0;
         used = cols(buf);

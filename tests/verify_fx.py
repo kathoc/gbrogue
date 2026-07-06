@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Feature pass: START-hold diagonal lock (menu on clean release), damage
+Feature pass: A-hold diagonal lock (A + D-pad; START = menu), damage
 flashes (red = took damage / yellow = dealt damage, GBC attributes),
 no sprite leak for unseen monsters during the move animation, and
 distance-map chasing (doorway geometry included).
@@ -193,7 +193,7 @@ def main() -> int:
               f"message slide showed only {len(states)} tile states")
     print(f"  message band slides ({len(states)} intermediate states)")
 
-    # ---------------- 4. START-hold diagonal lock
+    # ---------------- 4. A-hold diagonal lock (A + D-pad)
     clear_mons(gb)
     gb.tick(4)
     # relocate to the widest room's interior so diagonals exist
@@ -223,38 +223,34 @@ def main() -> int:
     gb.expect(diag is not None, "no diagonal-walkable neighbor")
     dx, dy, b1, b2 = diag
 
-    # cardinal press while START held: must NOT move, and releasing
-    # START afterwards must NOT open the menu
-    gb.hold("start")
+    # Controls rework: diagonals now live on A + D-pad (START is menu-only).
+    # A held + a lone cardinal: the diagonal lock ignores it, so no step.
+    gb.hold("a")
     gb.tick(6)
     gb.press(b1, hold=10, settle=16)
-    gb.release("start")
+    gb.release("a")
     gb.tick(30)
     gb.expect((gb.rd("g_px"), gb.rd("g_py")) == (px, py),
-              "cardinal moved during START hold")
-    gb.expect(not any("MENU" in r for r in gb.screen_rows()),
-              "menu opened although the D-pad was used")
+              "lone cardinal moved during A-hold diagonal lock")
 
-    # diagonal pair while START held: moves diagonally, still no menu
-    gb.hold("start")
+    # A held + a diagonal D-pad pair: one 8-way step
+    gb.hold("a")
     gb.tick(6)
     gb.hold(b1, b2)
     gb.tick(14)
     gb.release(b1, b2)
     gb.tick(10)
-    gb.release("start")
+    gb.release("a")
     gb.tick(40)
     gb.expect((gb.rd("g_px"), gb.rd("g_py")) == (px + dx, py + dy),
-              f"START+diagonal failed: at {(gb.rd('g_px'), gb.rd('g_py'))}, "
+              f"A+diagonal failed: at {(gb.rd('g_px'), gb.rd('g_py'))}, "
               f"want {(px + dx, py + dy)}")
-    gb.expect(not any("MENU" in r for r in gb.screen_rows()),
-              "menu opened after a diagonal-locked move")
-    print("  START-hold: diagonal locked, cardinal ignored, no menu")
+    print("  A-hold: diagonal locked, lone cardinal ignored")
 
-    # plain START tap still opens the menu
+    # START now always opens the menu (no D-pad diagonal on START anymore)
     gb.press_until("start", lambda rows: any("MENU" in r for r in rows))
     gb.press_until("b", lambda rows: not any("MENU" in r for r in rows))
-    print("  START tap still opens the menu")
+    print("  START tap opens the menu")
 
     # ---------------- 5. A+B hold: delayed auto-repeat resting
     gb.tick(30)          # clear the modal-close swallow window first

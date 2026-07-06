@@ -85,6 +85,8 @@ static uint8_t cam_target_for(uint8_t pt, uint8_t span_tiles,
 static uint8_t anim_fast;
 /* B-dash: skip the glide entirely (snap steps). */
 static uint8_t anim_skip;
+/* Last drawn phase of the post-Amulet alternating stairs hint. */
+static uint8_t s_hint_phase;
 
 /* A+B rest repeat interval per speed setting (frames). */
 static const uint8_t REST_RATE[3] = { 16u, 8u, 4u };
@@ -237,6 +239,7 @@ static uint8_t try_move(int8_t dx, int8_t dy) {
     }
     g_px = nx;
     g_py = ny;
+    g_last_dx = dx; g_last_dy = dy;     /* remember heading for auto-attack */
     sfx_play((step_alt ^= 1u) ? SFX_STEP_A : SFX_STEP_B);
     view_player_moved();
     item_pickup_here();
@@ -340,19 +343,62 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
     return steps ? 1u : 0u;
 }
 
-/* A button in the world: stairs, else search for traps. */
-/* A on the stairs always descends (deeper). After the Amulet you may
-   also climb with B (see play()); reaching level 1 by climbing wins. */
-static uint8_t do_action(void) {
+/* Wait a turn. Passing a turn also searches the adjacent cells for hidden
+   traps and passages: in this engine searching already costs a turn, so
+   rest and search are one action (removes a decision, and idling by a
+   suspicious wall reveals it). */
+static uint8_t wait_search(void) {
+    sfx_play(SFX_REST);                 /* soft "sa" for resting in place */
+    traps_search();
+    return 1;
+}
+
+/* Clockwise ring of the 8 neighbours, starting due north. */
+static const int8_t RING_DX[8] = {  0,  1, 1, 1, 0, -1, -1, -1 };
+static const int8_t RING_DY[8] = { -1, -1, 0, 1, 1,  1,  0, -1 };
+
+static uint8_t ring_index(int8_t dx, int8_t dy) {
+    uint8_t i;
+    for (i = 0; i < 8u; i++)
+        if (RING_DX[i] == dx && RING_DY[i] == dy) return i;
+    return 0;                           /* no heading -> start due north */
+}
+
+/* Auto-attack target for a bare A-tap: the monster in the last-moved
+   direction if one is there, else the first monster found scanning
+   clockwise from that heading. A diagonal cell only counts if it is
+   legally reachable (no corner-cut / doorway), matching movement rules. */
+static monster_t *pick_target(void) {
+    uint8_t start = ring_index(g_last_dx, g_last_dy);
+    uint8_t i;
+    for (i = 0; i < 8u; i++) {
+        uint8_t k = (uint8_t)((start + i) & 7u);
+        uint8_t nx = (uint8_t)(g_px + RING_DX[k]);
+        uint8_t ny = (uint8_t)(g_py + RING_DY[k]);
+        monster_t *m = mon_at(nx, ny);
+        if (!m) continue;
+        if (RING_DX[k] && RING_DY[k] && !map_diag_ok(g_px, g_py, nx, ny))
+            continue;                   /* can't strike around the corner */
+        return m;
+    }
+    return 0;
+}
+
+/* A-tap in the world: on the down-stair dive deeper (even with a monster
+   next to you — an escape); else auto-attack an adjacent monster; else
+   wait+search. */
+static uint8_t player_tap_a(void) {
     if (map_terrain(g_px, g_py) == TI_STAIRS_DOWN) {
         sfx_play(SFX_STAIRS);
         level_transition(1);
         msg_post_id(SID_DESCEND);
         return 1;
     }
-    sfx_play(SFX_REST);                 /* soft "sa" for resting in place */
-    traps_search();
-    return 1;                           /* searching takes a turn */
+    {
+        monster_t *m = pick_target();
+        if (m) { combat_player_attack(m); return 1; }
+    }
+    return wait_search();
 }
 
 /* B on the stairs after the Amulet climbs back up; level 1 = escape. */
@@ -367,6 +413,104 @@ static uint8_t climb_action(void) {
         msg_post_id(SID_CLIMB);
     }
     return 1;
+}
+
+/* B-tap in the world: on the down-stair with the Amulet, climb toward the
+   surface; otherwise wait+search. */
+static uint8_t player_tap_b(void) {
+    if (g_has_amulet && map_terrain(g_px, g_py) == TI_STAIRS_DOWN)
+        return climb_action();          /* handles depth-1 win + transition */
+    return wait_search();
+}
+
+/* Mark-time: rest one turn, then keep resting at the configured rate while
+   BOTH A and B stay held (glide doubled while repeating). Swallows the
+   release edges so letting go never triggers a stray tap action. */
+static void rest_repeat(void) {
+    uint8_t wait_f = 30u;
+    msg_post_id(SID_YOU_WAIT);
+    snapshot_positions();
+    finish_turn();
+    while (g_hp && !g_won
+           && (input_held() & (J_A | J_B)) == (J_A | J_B)) {
+        wait_vbl_done();
+        view_breathe();
+        input_tick();
+        render_msg_tick();
+        if (--wait_f) continue;
+        wait_f = REST_RATE[g_repeat_speed];
+        snapshot_positions();
+        anim_fast = 1;
+        finish_turn();
+        anim_fast = 0;
+    }
+    input_swallow_edges();
+}
+
+/* A held + D-pad: diagonal-locked walk. Two D-pad directions make one 8-way
+   step; cardinals alone are ignored, so the hold stays a pure diagonal
+   modifier. Runs until A is released; manages its own turns. */
+static void diag_walk(void) {
+    while (input_held() & J_A) {
+        uint8_t k2;
+        wait_vbl_done();
+        view_breathe();
+        render_msg_tick();
+        k2 = input_pressed();
+        if (k2 & DIR_KEYS) {
+            int8_t dx, dy;
+            dirs_to_vec(gather_dirs(k2), &dx, &dy);
+            if (dx && dy) {
+                snapshot_positions();
+                if (try_move(dx, dy)) finish_turn();
+                if (!g_hp || g_won) break;
+            }
+        }
+    }
+    input_swallow_edges();
+}
+
+/* B held + D-pad: dash (4-way run) in the held direction. */
+static void dash_dir(void) {
+    int8_t dx, dy;
+    dirs_to_vec((uint8_t)(input_held() & DIR_KEYS), &dx, &dy);
+    if (dx && dy) dy = 0;               /* runs are 4-way */
+    if (dx || dy) fast_move(dx, dy);
+    input_swallow_edges();
+}
+
+/* Resolve an A or B face-button press. While the button is held, the other
+   face button means mark-time (rest) and a D-pad press is a movement
+   modifier (A->diagonal, B->dash). A plain release runs the button's tap
+   action, but only after a short window that still catches a
+   near-simultaneous mark-time chord — so releasing both on the stairs never
+   leaks an unwanted descend/climb. Returns 1 if a single turn passed (the
+   caller runs finish_turn), 0 if it already handled its own turns. */
+#define AB_WINDOW 5u
+static uint8_t handle_face(uint8_t btn) {
+    uint8_t other = (uint8_t)((btn == J_A) ? J_B : J_A);
+    uint8_t f;
+    while (input_held() & btn) {
+        uint8_t h = input_held();
+        if (h & other) { rest_repeat(); return 0; }
+        if (h & DIR_KEYS) {
+            if (btn == J_A) diag_walk(); else dash_dir();
+            return 0;
+        }
+        wait_vbl_done();
+        view_breathe();
+        input_tick();
+        render_msg_tick();
+    }
+    for (f = 0; f < AB_WINDOW; f++) {
+        if (input_held() & other) { rest_repeat(); return 0; }
+        wait_vbl_done();
+        view_breathe();
+        input_tick();
+        render_msg_tick();
+    }
+    input_swallow_edges();
+    return (btn == J_A) ? player_tap_a() : player_tap_b();
 }
 
 static void new_level(void) {
@@ -511,6 +655,13 @@ static uint8_t play(void) {
             view_breathe();
             render_msg_tick();
 
+            /* Post-Amulet the stairs hint alternates B:up / A:down every
+               ~1s; rebuild the status row only when the phase flips. */
+            if (g_has_amulet && map_terrain(g_px, g_py) == TI_STAIRS_DOWN) {
+                uint8_t ph = (uint8_t)((g_play_frames & 0x40u) ? 1u : 0u);
+                if (ph != s_hint_phase) { s_hint_phase = ph; status_update(); }
+            }
+
             /* Asleep / frozen: the world moves on without you. */
             if (g_sleep_t) {
                 g_sleep_t--;
@@ -526,9 +677,9 @@ static uint8_t play(void) {
                 int8_t dx, dy;
                 uint8_t held = input_held();
                 uint8_t was_repeat = g_input_repeat;
-                if (held & J_START) {
-                    /* START held: diagonal-locked even when both edges
-                       land in the same (latched) poll */
+                if (held & J_A) {
+                    /* A held + D-pad: diagonal-locked step (two dirs make
+                       one 8-way move; a lone cardinal is ignored) */
                     dirs_to_vec(gather_dirs(keys), &dx, &dy);
                     if (dx && dy) acted = try_move(dx, dy);
                 } else if (held & J_B) {
@@ -543,34 +694,11 @@ static uint8_t play(void) {
                     anim_fast = was_repeat;   /* held-walk glides at 2x */
                     acted = try_move(dx, dy);
                 }
-            } else if ((keys & (J_A | J_B)) &&
-                       (input_held() & (J_A | J_B)) == (J_A | J_B)) {
-                /* A+B together: rest one turn; keep holding both to
-                   repeat after 0.5s at the configured rate, with the
-                   glide animation doubled while repeating */
-                uint8_t wait_f = 30u;
-                msg_post_id(SID_YOU_WAIT);
-                snapshot_positions();
-                finish_turn();
-                while (g_hp && !g_won
-                       && (input_held() & (J_A | J_B)) == (J_A | J_B)) {
-                    wait_vbl_done();
-                    view_breathe();
-                    input_tick();
-                    render_msg_tick();
-                    if (--wait_f) continue;
-                    wait_f = REST_RATE[g_repeat_speed];
-                    snapshot_positions();
-                    anim_fast = 1;
-                    finish_turn();
-                    anim_fast = 0;
-                }
-                input_swallow_edges();
-                acted = 0;                    /* turns already applied */
-            } else if (keys & J_A) {
-                acted = do_action();
-            } else if (keys & J_B) {
-                acted = climb_action();   /* Amulet: climb up the stairs */
+            } else if (keys & (J_A | J_B)) {
+                /* A or B pressed: resolve tap vs hold+D-pad modifier vs the
+                   A+B mark-time chord. handle_face blocks until it knows
+                   which, and fires tap actions on release. */
+                acted = handle_face((uint8_t)((keys & J_A) ? J_A : J_B));
             } else if (keys & J_SELECT) {
                 /* tap = pack; hold ~0.4s = full-map overview */
                 uint8_t held_f = 0;
@@ -588,37 +716,15 @@ static uint8_t play(void) {
                     acted = ui_inv_show();
                 }
             } else if (keys & J_START) {
-                /* START held + D-pad: diagonal-locked walking (both
-                   D-pad buttons together, cardinals ignored). Releasing
-                   START without touching the D-pad opens the menu. */
-                uint8_t dir_used = 0;
-                while (input_held() & J_START) {
-                    uint8_t k2;
-                    wait_vbl_done();
-                    view_breathe();
-                    render_msg_tick();
-                    k2 = input_pressed();
-                    if (k2 & DIR_KEYS) {
-                        int8_t dx, dy;
-                        dir_used = 1;
-                        dirs_to_vec(gather_dirs(k2), &dx, &dy);
-                        if (dx && dy) {
-                            snapshot_positions();
-                            if (try_move(dx, dy)) finish_turn();
-                            if (!g_hp || g_won) break;
-                        }
-                    }
+                /* START opens the menu (diagonals now live on A + D-pad). */
+                uint8_t r = ui_menu_show();
+                if (r == MENU_SUSPEND) {
+                    save_write();
+                    ui_popup(lang_str(SID_SAVED), lang_str(SID_SAFE_OFF), 0);
+                    return END_SUSPENDED;
                 }
+                acted = (r == MENU_REST) ? 1u : 0u;
                 input_swallow_edges();
-                if (!dir_used && g_hp && !g_won) {
-                    uint8_t r = ui_menu_show();
-                    if (r == MENU_SUSPEND) {
-                        save_write();
-                        ui_popup(lang_str(SID_SAVED), lang_str(SID_SAFE_OFF), 0);
-                        return END_SUSPENDED;
-                    }
-                    acted = (r == MENU_REST) ? 1u : 0u;
-                }
             }
             if (acted) finish_turn();
             else render_present();
