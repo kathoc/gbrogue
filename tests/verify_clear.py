@@ -46,8 +46,10 @@ def wait_depth(gb, want, frames=300):
         gb.tick(1)
         if gb.rd("g_depth") == want:
             # depth flips just before mapgen; let the new floor finish
-            # generating + the fade settle before we read the map
-            gb.tick(90)
+            # generating AND the arrival message/fade fully settle before
+            # the next teleport+use (a too-early A after arriving is
+            # swallowed and the descend silently no-ops)
+            gb.tick(150)
             return True
     return False
 
@@ -87,9 +89,10 @@ def main() -> int:
     # ---- level 26: the Amulet must be here ----
     validate(gb, AMULET_LEVEL)
     fbase = gb.addr("g_floor")
-    # scan the floor-item slots for IK_AMULET (kind == 8)
+    # scan all MAX_FLOOR_ITEMS=24 floor slots for IK_AMULET (kind == 8);
+    # the amulet can land in any free slot, not just the low ones
     found_amulet = any(gb.pb.memory[fbase + i * MON_STRIDE] == 8
-                       for i in range(8))
+                       for i in range(24))
     if not found_amulet:
         raise Failure("Amulet of Yendor not placed on level 26")
     gb.pb.memory[gb.addr("g_has_amulet")] = 1     # pick it up
