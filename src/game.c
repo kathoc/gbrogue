@@ -213,19 +213,13 @@ static uint8_t try_move(int8_t dx, int8_t dy) {
     nx = (uint8_t)(g_px + dx);
     ny = (uint8_t)(g_py + dy);
     m = mon_at(nx, ny);
-    /* Diagonal rules: a STEP obeys the strict corner/door rule, but a
-       diagonal STRIKE only needs the looser attack rule (hit around a
-       wall corner, never through a doorway). */
-    if (dx && dy) {
-        if (m) {
-            if (!map_diag_attack_ok(g_px, g_py, nx, ny)) {
-                wall_bump(dx, dy);
-                return 0;
-            }
-        } else if (!map_diag_ok(g_px, g_py, nx, ny)) {
-            wall_bump(dx, dy);         /* blocked corner: same thud */
-            return 0;
-        }
+    /* Diagonal rule (same for a step and a strike): no cutting a wall
+       corner, no reaching through a doorway. Keeps the player symmetric
+       with monsters — neither side lands a diagonal hit around the corner
+       of an L-corridor or across a door. */
+    if (dx && dy && !map_diag_ok(g_px, g_py, nx, ny)) {
+        wall_bump(dx, dy);
+        return 0;
     }
     if (m) {
         /* being held stops your feet, not your arms — otherwise a

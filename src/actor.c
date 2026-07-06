@@ -183,15 +183,6 @@ static uint8_t mon_can_reach(uint8_t fx, uint8_t fy, uint8_t tx, uint8_t ty) {
     return 1;
 }
 
-/* A monster may STRIKE a diagonal cell under the looser attack rule:
-   around wall corners is fine, only doorway diagonals are barred. This
-   lets a monster hit a cornered player instead of freezing beside it. */
-static uint8_t mon_can_strike(uint8_t fx, uint8_t fy, uint8_t tx, uint8_t ty) {
-    if (fx != tx && fy != ty)
-        return map_diag_attack_ok(fx, fy, tx, ty);
-    return 1;
-}
-
 static void mon_step(monster_t *m) {
     int8_t sx = 0, sy = 0;
     if (m->eff & MEF_CONF) {
@@ -250,8 +241,12 @@ static void mon_one_turn(monster_t *m) {
         return;
     }
     if (adjacent8(m->x, m->y, g_px, g_py) &&
-        mon_can_strike(m->x, m->y, g_px, g_py)) {
-        /* diagonal strikes: corners OK, doorways barred (mon_can_strike) */
+        mon_can_reach(m->x, m->y, g_px, g_py)) {
+        /* A diagonal strike obeys the SAME strict rule as a step: no
+           cutting a wall corner, no reaching through a doorway. A monster
+           wedged one diagonal away past a wall/door must come around to
+           an orthogonal cell before it can hit — no more diagonal jabs
+           through the corner of an L-corridor or across a doorway. */
         combat_monster_attack(m);
     } else {
         mon_step(m);
@@ -322,6 +317,12 @@ void mons_take_turns(void) {
             } else {
                 continue;
             }
+            /* It only just woke THIS turn — it stirs but does not get to
+               move or strike yet. Stepping next to a sleeper no longer
+               hands it a free first hit; it acts from next turn on.
+               (A monster woken by being HIT sets MST_AWAKE inside
+               mon_damage, not here, so it still retaliates normally.) */
+            continue;
         }
 
         if (!mapped) {

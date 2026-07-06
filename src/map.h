@@ -23,13 +23,10 @@ void      map_set_terrain(uint8_t x, uint8_t y, tile_id_t t);
 void      map_set_flag(uint8_t x, uint8_t y, uint8_t flag);
 void      map_clear_flag(uint8_t x, uint8_t y, uint8_t flag);
 uint8_t   map_walkable(uint8_t x, uint8_t y);
-/* Shared diagonal legality (players AND monsters): doorways are
-   strictly orthogonal and wall corners cannot be cut. */
+/* Shared diagonal legality for both steps AND strikes, players and
+   monsters alike: doorways are strictly orthogonal and wall corners
+   cannot be cut. */
 uint8_t   map_diag_ok(uint8_t fx, uint8_t fy, uint8_t tx, uint8_t ty);
-/* Looser rule for diagonal ATTACKS: corners may be struck across, only
-   doorway diagonals are forbidden. Keeps monsters from freezing one
-   diagonal away from a cornered target. */
-uint8_t   map_diag_attack_ok(uint8_t fx, uint8_t fy, uint8_t tx, uint8_t ty);
 
 /* Rooms (filled in by mapgen). flags bit0 = "gone" (corridor junction
    instead of a real room), bit1 = explored. */

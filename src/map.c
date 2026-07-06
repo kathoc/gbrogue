@@ -60,20 +60,6 @@ uint8_t map_diag_ok(uint8_t fx, uint8_t fy, uint8_t tx, uint8_t ty) {
     return 1;
 }
 
-uint8_t map_diag_attack_ok(uint8_t fx, uint8_t fy, uint8_t tx, uint8_t ty) {
-    /* A diagonal STRIKE is looser than a diagonal STEP: you may hit
-       around an open wall corner (so a monster never freezes one
-       diagonal away from a cornered target), but never *through a
-       doorway* — the original "no diagonal attack from a room into the
-       corridor outside a door" rule. Block if any of the four cells
-       framing the diagonal is a door. */
-    if (map_terrain(fx, fy) == TI_DOOR || map_terrain(tx, ty) == TI_DOOR)
-        return 0;
-    if (map_terrain(tx, fy) == TI_DOOR || map_terrain(fx, ty) == TI_DOOR)
-        return 0;
-    return 1;
-}
-
 uint8_t map_room_at(uint8_t x, uint8_t y) {
     uint8_t i;
     for (i = 0; i < g_room_count; i++) {
