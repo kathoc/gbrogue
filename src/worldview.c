@@ -56,18 +56,8 @@ void view_player_moved(void) {
     update_camera();
 }
 
-uint8_t view_visible(uint8_t wx, uint8_t wy) {
-    if (g_blind_t)
-        return wx == g_px && wy == g_py;
-    if (g_cur_room != 0xFFu) {
-        const room_t *r = &g_rooms[g_cur_room];
-        if (wx >= r->x && wx < (uint8_t)(r->x + r->w) &&
-            wy >= r->y && wy < (uint8_t)(r->y + r->h)) return 1;
-    }
-    if ((uint8_t)(wx - g_px + 1u) <= 2u && (uint8_t)(wy - g_py + 1u) <= 2u)
-        return 1;
-    return 0;
-}
+/* view_visible() and view_player_moved_ram() live in bank0_view.c (fixed
+   bank) so banked scroll logic (BANK2 FOV/teleport) can reach them. */
 
 /* -------------------------------------------------- world BG painting */
 

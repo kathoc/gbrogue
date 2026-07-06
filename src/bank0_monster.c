@@ -9,9 +9,22 @@
  * polymorph), and call_bank unmaps bank 1 — so these must live in the
  * fixed bank. mkind far-copies the stat record from bank 2 (mkind_data)
  * into this WRAM cache; far_copy itself is already in bank 0.
+ * monster_pick lives here too — banked read_scroll (BANK2 create-monster)
+ * calls it; it touches only rng (bank 0) and a local const ladder.
  */
 BANKREF_EXTERN(mkind_data)
 extern const mkind_t MKIND_ROM[MKIND_COUNT];
+
+/* Rogue 5.4's shallow-to-deep spawn ladder. */
+static const char LVL_MONS[MKIND_COUNT + 1] = "KEBSHIROZLCQANYFTWPXUMVGJD";
+
+uint8_t monster_pick(uint8_t depth) {
+    /* index ~ depth-1 + rnd(5)-2, clamped to the ladder. */
+    int8_t idx = (int8_t)(depth - 1) + (int8_t)rng_range(5) - 2;
+    if (idx < 0) idx = 0;
+    if (idx >= MKIND_COUNT) idx = MKIND_COUNT - 1;
+    return (uint8_t)(LVL_MONS[idx] - 'A');
+}
 
 static mkind_t mk_cache;
 static uint8_t mk_kind = 0xFFu;

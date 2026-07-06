@@ -1,14 +1,8 @@
 #include "util.h"
 
-char *fmt_str(char *dst, const char *s) {
-    while (*s) *dst++ = *s++;
-    return dst;
-}
-
-char *fmt_char(char *dst, char c) {
-    *dst++ = c;
-    return dst;
-}
+/* fmt_str / fmt_char moved to bank0_fmt.c (fixed bank) so banked scroll
+   naming can reach them. fmt_u16 stays here: it emits __divuint/__moduint
+   (bank 1) and no banked path builds a numeric name. */
 
 char *fmt_u16(char *dst, uint16_t v) {
     char tmp[5];

@@ -11,6 +11,11 @@ extern uint8_t g_cur_room;          /* room index player stands in, 0xFF = corri
    and recomputes the camera target. */
 void view_player_moved(void);
 
+/* RAM-only sibling (bank0_view.c): update room/explored state for the new
+   player cell but paint nothing — for banked teleport (BANK2), whose
+   repaint is deferred to view_world_enter() when the pack UI closes. */
+void view_player_moved_ram(void);
+
 /* True if world cell (wx,wy) is in the player's line of sight. */
 uint8_t view_visible(uint8_t wx, uint8_t wy);
 
