@@ -13,6 +13,11 @@
 /* Own translation unit: heavy render_text call sites must stay out of
    game.c (SDCC layout constraint, docs/architecture.md). */
 
+/* The death screen fades out slowly and deliberately (a longer ramp than
+   an ordinary floor transition) so the world dims away before GAME OVER
+   appears. */
+#define DEATH_FADE_FRAMES 100u
+
 static void draw_score(uint8_t y) {
     char buf[32];
     char *p;
@@ -69,8 +74,8 @@ void ui_dead_show(void) {
        into VRAM (set_bkg_data), and doing that with the LCD lit over the
        still-visible world tore the screen. Hide it behind the fade, load
        the art, then wait_start() fades back in — the level_transition
-       pattern (game.c). */
-    render_fade_out(FADE_OUT_FRAMES);
+       pattern (game.c). A slower ramp for the death screen (ゆっくり). */
+    render_fade_out(DEATH_FADE_FRAMES);
     render_set_world(0);
     render_clear_all();
     render_art_begin();
