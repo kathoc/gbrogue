@@ -10,17 +10,8 @@
 trap_t  g_traps[MAX_TRAPS];
 uint8_t g_trap_count;
 
-void traps_clear(void) {
-    g_trap_count = 0;
-}
-
-void traps_add(uint8_t x, uint8_t y, uint8_t kind) {
-    if (g_trap_count >= MAX_TRAPS) return;
-    g_traps[g_trap_count].x = x;
-    g_traps[g_trap_count].y = y;
-    g_traps[g_trap_count].kind = kind;
-    g_trap_count++;
-}
+/* traps_clear() and traps_add() live in bank0_traps.c (fixed bank) so
+   banked mapgen (BANK2) can reach them; both are pure RAM appends. */
 
 static trap_t *trap_at(uint8_t x, uint8_t y) {
     uint8_t i;

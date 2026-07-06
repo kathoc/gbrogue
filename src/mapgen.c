@@ -18,6 +18,20 @@
 #define CELL_W     10
 #define CELL_H     9
 
+/* GRID (3) is not a power of two, so `idx % GRID` / `idx / GRID` would emit
+   __divuchar/__moduchar — SDCC runtime helpers that live in bank 1 and are
+   unreachable once mapgen runs in BANK2 (call_bank unmaps bank 1). idx is
+   always 0..GRID*GRID-1, so these subtract loops are cheap and helper-free. */
+static uint8_t grid_col(uint8_t idx) {
+    while (idx >= GRID) idx -= GRID;
+    return idx;
+}
+static uint8_t grid_row(uint8_t idx) {
+    uint8_t r = 0;
+    while (idx >= GRID) { idx -= GRID; r++; }
+    return r;
+}
+
 /* Per-room corridor anchor: interior point corridors route to. */
 static uint8_t anchor_x[MAX_ROOMS];
 static uint8_t anchor_y[MAX_ROOMS];
@@ -25,8 +39,8 @@ static uint8_t connected[MAX_ROOMS];
 
 static void carve_room(uint8_t idx) {
     room_t *r = &g_rooms[idx];
-    uint8_t cx0 = (uint8_t)((idx % GRID) * CELL_W);
-    uint8_t cy0 = (uint8_t)((idx / GRID) * CELL_H);
+    uint8_t cx0 = (uint8_t)(grid_col(idx) * CELL_W);
+    uint8_t cy0 = (uint8_t)(grid_row(idx) * CELL_H);
     uint8_t x, y;
 
     if (r->flags & ROOM_GONE) {
@@ -110,13 +124,13 @@ static void connect_rooms(uint8_t a, uint8_t b) {
     if (dug_links & bit) return;
     dug_links |= bit;
     if ((uint8_t)(hi - lo) == 1u) {            /* east-west neighbors */
-        uint8_t mc = (uint8_t)((lo % GRID) * CELL_W + CELL_W - 1u +
+        uint8_t mc = (uint8_t)(grid_col(lo) * CELL_W + CELL_W - 1u +
                                (rng_byte() & 1u));
         dig_h(anchor_x[lo], mc, anchor_y[lo]);
         dig_v(anchor_y[lo], anchor_y[hi], mc);
         dig_h(mc, anchor_x[hi], anchor_y[hi]);
     } else {                                   /* north-south neighbors */
-        uint8_t mr = (uint8_t)((lo / GRID) * CELL_H + CELL_H - 1u +
+        uint8_t mr = (uint8_t)(grid_row(lo) * CELL_H + CELL_H - 1u +
                                (rng_byte() & 1u));
         dig_v(anchor_y[lo], mr, anchor_x[lo]);
         dig_h(anchor_x[lo], anchor_x[hi], mr);
@@ -183,8 +197,8 @@ static const int8_t NEIGH_DX[4] = { 0, 0, -1, 1 };
 static const int8_t NEIGH_DY[4] = { -1, 1, 0, 0 };
 
 static uint8_t grid_neighbor(uint8_t idx, uint8_t dir) {
-    int8_t c = (int8_t)(idx % GRID) + NEIGH_DX[dir];
-    int8_t r = (int8_t)(idx / GRID) + NEIGH_DY[dir];
+    int8_t c = (int8_t)grid_col(idx) + NEIGH_DX[dir];
+    int8_t r = (int8_t)grid_row(idx) + NEIGH_DY[dir];
     if (c < 0 || c >= GRID || r < 0 || r >= GRID) return 0xFFu;
     return (uint8_t)(r * GRID + c);
 }
