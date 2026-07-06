@@ -241,8 +241,9 @@ static uint8_t try_move(int8_t dx, int8_t dy) {
     view_player_moved();
     item_pickup_here();
     if (traps_step()) {
-        /* trap door: plunge one level down */
-        ui_popup(lang_str(SID_PLUNGE1), lang_str(SID_PLUNGE2), 0);
+        /* trap door: fast-fade to the plunge screen, wait for A, then the
+           floor drops in behind the black and fades up. */
+        ui_trapdoor();              /* leaves the screen faded to black */
         g_depth++;
         new_level();
         fresh_floor = 1;
@@ -252,6 +253,8 @@ static uint8_t try_move(int8_t dx, int8_t dy) {
             else g_hp -= d;
         }
         msg_post_id(SID_LAND_HARD);
+        render_present();
+        render_fade_in(FADE_IN_FRAMES);
     }
     return 1;
 }
