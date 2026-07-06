@@ -51,10 +51,12 @@ void combat_gain_xp(uint16_t xp) {
     while (g_level - 1u < E_LEVEL_COUNT && g_xp >= E_LEVELS[g_level - 1u]) {
         char buf[32];
         char *p;
+        uint8_t inc = rng_dice(1, 10);
         sfx_play(SFX_LVLUP);
         g_level++;
-        g_maxhp = (uint8_t)(g_maxhp + rng_dice(1, 10));
-        g_hp = g_maxhp;                            /* Rogue tops you up */
+        g_maxhp = (uint8_t)(g_maxhp + inc);
+        g_hp = (uint8_t)(g_hp + inc);   /* heal only by the max-HP gain,
+                                           not a full top-up */
         p = fmt_str(buf, lang_str(SID_WELCOME_LVL));
         p = fmt_u16(p, g_level);
         *p = 0;
