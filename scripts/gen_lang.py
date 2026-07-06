@@ -80,6 +80,7 @@ S = [
     ("PLUNGE1",        "You plunged through",  "おとしあなだ!"),
     ("PLUNGE2",        "a trap door!",         "したのかいへ らっか!"),
     ("LAND_HARD",      "You land hard",        "したたかに おちた"),
+    ("TRAP_A",         f"{BTN_A}",             f"{BTN_A}"),
     ("AMULET_GET",     "The Amulet of Yendor!", "イェンダーのまよけだ!"),
     # combat
     ("YOU_HIT",        "You hit the %s",       "%sに いちげき!"),
@@ -195,6 +196,10 @@ S = [
     ("MENU_SEARCH",    "Search",               "さがす"),
     ("MENU_THROW",     "Throw / fire",         "なげる"),
     ("MENU_DISPLAY",   "Display mode",         "がめんきりかえ"),
+    ("MENU_LOG",       "Message log",          "ログ"),
+    ("AIM_THROW",      "throw",                "なげる"),
+    ("AIM_ZAP",        "zap",                  "ふる"),
+    ("AIM_DIR",        "which way?",           "ほうこうを せんたく"),
     ("MENU_SPEED",     "Repeat speed",         "リピートそくど"),
     ("MENU_LANG",      "Language: EN",         "げんご: にほんご"),
     ("MENU_QUIT",      "Save & quit",          "ちゅうだんする"),
