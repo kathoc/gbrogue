@@ -15,11 +15,19 @@ or WRAM values — pixels are only for humans.
 """
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
 
 from pyboy import PyBoy
+
+# Watch mode: set GBR_WATCH=1 to open a real PyBoy window and run at
+# real-time so you can SEE a verify_*.py script play out (headless + full
+# speed otherwise). GBR_WATCH=<n> throttles to n x real-time (e.g. 2 = 2x,
+# 0 = unlimited-but-visible). Example:
+#   GBR_WATCH=1 python tests/verify_clear.py
+_WATCH = os.environ.get("GBR_WATCH")
 
 ROOT = Path(__file__).resolve().parent.parent
 ROM = ROOT / "build" / "gbrogue.gb"
@@ -51,7 +59,16 @@ class GB:
             sav = rom.with_suffix(".sav")
             if sav.exists():
                 sav.unlink()
-        self.pb = PyBoy(str(rom), window="null", sound_emulated=sound, cgb=cgb)
+        window = "SDL2" if _WATCH is not None else "null"
+        self.pb = PyBoy(str(rom), window=window, sound_emulated=sound, cgb=cgb)
+        if _WATCH is not None:
+            try:
+                speed = float(_WATCH)
+            except ValueError:
+                speed = 1.0
+            # 0 = unlimited; anything else throttles to n x real-time so the
+            # run is actually watchable instead of an instant blur.
+            self.pb.set_emulation_speed(speed if speed >= 0 else 1.0)
         self.sym_path = rom.with_suffix(".noi")
         self._syms: dict[str, tuple[int, int]] | None = None
         self.tick(boot_frames)
