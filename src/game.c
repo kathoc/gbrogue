@@ -439,6 +439,8 @@ static void rank_record(void) {
     e.deepest = g_deepest;
     e.final = g_depth;
     e.amulet = g_has_amulet;
+    e.cause = g_death_sid;   /* 0 on a won run -> no cause line */
+    e.mon = g_death_mon;
     rank_insert(&e);
 }
 

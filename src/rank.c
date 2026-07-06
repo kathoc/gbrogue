@@ -11,7 +11,10 @@
  * BANK5 is mapped.
  */
 #define RB       ((uint8_t *)0xBF80)
-#define RB_MAGIC 0x4Bu
+/* Bumped 'K'(0x4B)->'L'(0x4C) when rank_entry_t grew a death-cause field:
+   the entry stride changed, so any pre-existing 5-byte table must be
+   discarded (a one-time ranking reset on upgrade) rather than misread. */
+#define RB_MAGIC 0x4Cu
 #define ESZ      ((uint8_t)sizeof(rank_entry_t))
 #define HDR      1u
 #define TOTAL    (uint8_t)(HDR + RANK_N * ESZ)

@@ -171,6 +171,7 @@ void combat_monster_attack(monster_t *m) {
     render_flash_add(g_px, g_py, FLASH_HURT, SPR_PLAYER);
     if (dmg >= g_hp) {
         g_hp = 0;
+        g_death_mon = m->kind;   /* remembered for the ranking cause line */
         msg_death(SID_DEATH_MON, lang_name(LT_MNAME, m->kind));
         return;
     }

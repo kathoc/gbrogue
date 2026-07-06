@@ -27,6 +27,8 @@ uint8_t  g_lang = 1;     /* player setting — survives new games;
 
 void world_new(void) {
     g_death_cause[0] = 0;
+    g_death_sid = 0;    /* no fatal blow yet (won runs keep this 0) */
+    g_death_mon = 0;
     /* Rogue 5.4 opening stats. AC 8 = the starting ring mail. */
     g_depth = 1;
     g_hp = 12; g_maxhp = 12;

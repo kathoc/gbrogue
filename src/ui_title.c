@@ -42,6 +42,9 @@ static void draw_item(uint8_t y, uint8_t sid, uint8_t selected) {
     char *p;
     p = fmt_str(buf, selected ? "> " : "  ");
     p = fmt_str(p, lang_str(sid));
+    /* Debug (invincibility) armed: mark NEW GAME / はじめる with a '*'. */
+    if (g_debug && sid == SID_TITLE_NEW)
+        p = fmt_str(p, "*");
     p = fmt_str(p, "   ");            /* wipe the longer other-language tail */
     *p = 0;
     render_text(MENU_COL, y, buf);

@@ -9,6 +9,10 @@
 /* Natural-language cause of death ("Slain by the bat"); set at the
    moment HP hits zero, shown on the game-over screen. */
 extern char g_death_cause[];
+/* Compact cause for the ranking: the fatal SID_DEATH_* and, when it was
+   a monster kill, the monster kind (see rank_entry_t / ui_rank.c). */
+extern uint8_t g_death_sid;
+extern uint8_t g_death_mon;
 void msg_death(uint8_t sid, const char *arg);
 
 /* Show s on the message band and archive it in the log ring. */

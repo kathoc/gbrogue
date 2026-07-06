@@ -51,6 +51,9 @@ static void wait_start(uint8_t y, const char *line, uint8_t sid) {
     render_status(st);
     render_message(0);
     render_present();
+    /* The caller faded to black before rewriting VRAM (matching
+       level_transition); reveal the finished screen now. */
+    render_fade_in(FADE_IN_FRAMES);
     input_swallow_edges();
     for (;;) {
         wait_vbl_done();
@@ -62,6 +65,12 @@ void ui_dead_show(void) {
     char buf[42];
     char *p;
 
+    /* Fade to black FIRST: art_blit() streams tile-pattern data straight
+       into VRAM (set_bkg_data), and doing that with the LCD lit over the
+       still-visible world tore the screen. Hide it behind the fade, load
+       the art, then wait_start() fades back in — the level_transition
+       pattern (game.c). */
+    render_fade_out(FADE_OUT_FRAMES);
     render_set_world(0);
     render_clear_all();
     render_art_begin();
@@ -84,6 +93,9 @@ void ui_dead_show(void) {
 }
 
 void ui_win_show(void) {
+    /* Same clean swap as the death screen: fade out over the world, build
+       the victory screen, then wait_start() fades it in. */
+    render_fade_out(FADE_OUT_FRAMES);
     render_set_world(0);
     render_clear_all();
     render_text(3, 3, lang_str(SID_WON));

@@ -20,6 +20,8 @@ typedef struct {
     uint8_t  deepest;   /* deepest floor reached */
     uint8_t  final;     /* floor at run end */
     uint8_t  amulet;    /* 1 if the Amulet was obtained (climb-back form) */
+    uint8_t  cause;     /* SID_DEATH_* of the fatal blow, 0 = survived/won */
+    uint8_t  mon;       /* monster kind when cause == SID_DEATH_MON */
 } rank_entry_t;
 
 /* BANK0 shims (bank_api.c) — the only entry points the game calls. */

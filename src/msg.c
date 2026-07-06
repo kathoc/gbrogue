@@ -10,9 +10,14 @@ static uint8_t head;                    /* next slot to write */
 
 /* The game-over screen shows this instead of the raw last log line. */
 char g_death_cause[LOG_COLS + 1];
+/* Compact form of the same cause, persisted into the ranking: the fatal
+   SID (SID_DEATH_*) plus the monster kind when it was a monster kill. */
+uint8_t g_death_sid;
+uint8_t g_death_mon;
 void msg_death(uint8_t sid, const char *arg) {
     const char *p = lang_str(sid);
     uint8_t o = 0;
+    g_death_sid = sid;
     while (*p && o < LOG_COLS) {
         if ((uint8_t)*p == 0x01u && arg) {
             const char *a = arg;
