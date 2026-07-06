@@ -14,5 +14,6 @@ uint8_t items_use(uint8_t slot);
    turn count comes back in g_use_turns. All callees are in bank 0. */
 extern uint8_t g_use_slot, g_use_turns;
 void bank_consume_effect(void);   /* BANK2 entry — run via call_bank only */
+void bank_read_scroll(void);      /* BANK2 entry — run via call_bank only */
 
 #endif
