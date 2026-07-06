@@ -295,12 +295,17 @@ static uint8_t walk_neighbors(uint8_t x, uint8_t y) {
     return n;
 }
 
-static uint8_t any_monster_visible(void) {
+/* Is (x,y) inside a visible monster's strike range? True for the 3x3 around
+   it (8-way melee), and for the monster's own cell — so a dash halts one
+   step short of a fight instead of charging in. */
+static uint8_t in_monster_reach(uint8_t x, uint8_t y) {
     uint8_t i;
     for (i = 0; i < MAX_MONSTERS; i++) {
         const monster_t *m = &g_mons[i];
         if (m->kind == MON_NONE) continue;
-        if (view_visible(m->x, m->y)) return 1;
+        if (!view_visible(m->x, m->y)) continue;
+        if ((uint8_t)(m->x - x + 1u) <= 2u && (uint8_t)(m->y - y + 1u) <= 2u)
+            return 1;
     }
     return 0;
 }
@@ -312,7 +317,16 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
     anim_skip = 1;                    /* dash: no glide, just go */
     mons_dash(1);                     /* throttle the chase-map rebuild */
     while (steps < 40u) {
+        uint8_t nx = (uint8_t)(g_px + dx);
+        uint8_t ny = (uint8_t)(g_py + dy);
+        uint8_t onto_item;
         tile_id_t here;
+        /* Look before stepping: halt one cell short of a door (don't barge
+           through), one cell short of a monster's reach, and (via try_move
+           failing) one cell short of a wall. */
+        if (map_terrain(nx, ny) == TI_DOOR) break;
+        if (in_monster_reach(nx, ny)) break;
+        onto_item = item_floor_at(nx, ny);
         snapshot_positions();
         if (!try_move(dx, dy)) break;
         steps++;
@@ -322,14 +336,12 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
         input_tick();
         render_msg_tick();
         if (!g_hp || g_won) break;
+        if (onto_item) break;                        /* picked it up: stop on it */
         here = map_terrain(g_px, g_py);
-        if (here == TI_DOOR || here == TI_STAIRS_DOWN ||
-            here == TI_STAIRS_UP)
-            break;
+        if (here == TI_STAIRS_DOWN || here == TI_STAIRS_UP) break;
         if (here == TI_TRAP && !(map_cell(g_px, g_py) & MF_HIDDEN)) break;
         if (g_hp < hp0 || g_sleep_t || g_held_t) break;
-        if (any_monster_visible()) break;
-        if (item_floor_at(g_px, g_py)) break;
+        if (in_monster_reach(g_px, g_py)) break;     /* one closed in on us */
         if (g_cur_room != room0) break;              /* entered / left a room */
         if (g_cur_room == 0xFFu && walk_neighbors(g_px, g_py) > 2u) break;
     }
