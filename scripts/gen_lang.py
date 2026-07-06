@@ -59,6 +59,7 @@ S = [
     ("TITLE_NEW",      "NEW GAME",             "はじめる"),
     ("TITLE_CONT",     "CONTINUE",             "つづきから"),
     ("MENU_RANK",      "RANKING",              "ランキング"),
+    ("TITLE_SEED",     "SEED",                 "シード"),
     ("RANK_TITLE",     "- RANKING -",          "- ランキング -"),
     ("RANK_LEGEND",    "rank G=gold B=floor cause plays", "G:きんか B:ちか しいん プレイ"),
     ("RANK_EMPTY",     "no records yet",       "きろくなし"),

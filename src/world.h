@@ -40,6 +40,12 @@ extern uint8_t g_deepest;
    kept out of the ranking. Not saved/persisted. */
 extern uint8_t g_debug;
 
+/* RNG seed control. g_seed_override != 0 pins the seed for the next new
+   game (title seed entry / test harness); g_run_seed is the seed actually
+   used, for display and reproduction. Not reset by world_new. */
+extern uint16_t g_seed_override;
+extern uint16_t g_run_seed;
+
 /* Input repeat speed setting: 0 slow / 1 normal / 2 fast. Applies to
    held-D-pad walking and to the A+B rest repeat. */
 extern uint8_t  g_repeat_speed;

@@ -87,6 +87,18 @@ void ui_dead_show(void) {
     *p = 0;
     render_text(5, 12, buf);
     draw_score(13);
+    /* the run's seed, so a memorable run can be replayed from the title */
+    {
+        char sb[12];
+        char *q = fmt_str(sb, "seed ");
+        uint8_t d;
+        for (d = 0; d < 4u; d++) {
+            uint8_t nib = (uint8_t)((g_run_seed >> ((3u - d) * 4u)) & 0xFu);
+            *q++ = (char)(nib < 10u ? '0' + nib : 'A' + (nib - 10u));
+        }
+        *q = 0;
+        render_text(5, 14, sb);
+    }
 
     /* the cause of death, as a sentence (raw log line as fallback) */
     wait_start(15, g_death_cause[0] ? g_death_cause : g_last_msg, SID_RIP);
