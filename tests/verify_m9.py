@@ -160,22 +160,28 @@ def main() -> int:
     gb.shot("m9_01_menu")
     gb.press_until("b", lambda rows: not any("MENU" in r for r in rows))
 
-    # --- throw: shuriken kit slot, via menu (Throw is row 2)
-    def shuriken_qty():
+    # --- throw: shuriken is now thrown FROM THE INVENTORY (select it, A ->
+    #     "throw" action -> aim), not from the menu.
+    def shuriken(kv=False):
         for slot, it in read_pack(gb).items():
             if it[0] == 5 and it[1] == 7:
-                return it[4]
-        return 0
-    q0 = shuriken_qty()
-    gb.expect(q0 >= 1, "debug kit lacks shuriken")
-    menu_pick(2)                          # Throw / fire -> aim on the world
-    gb.press("right", hold=6, settle=10)  # turn the aim cursor right
+                return (slot, it[4]) if kv else it[4]
+        return (None, 0) if kv else 0
+    sl, q0 = shuriken(kv=True)
+    gb.expect(sl is not None and q0 >= 1, "debug kit lacks shuriken")
+    gb.press_until("select",
+                   lambda rows: any("PACK" in r for r in rows) and "close" in rows[17])
+    for _ in range(sl):                   # cursor 0 -> the shuriken row
+        gb.press("down", hold=6, settle=8)
+    gb.press("a", hold=8, settle=20)      # action submenu (primary = throw)
+    gb.press("a", hold=8, settle=30)      # confirm -> aim on the world
+    gb.press("right", hold=6, settle=10)  # aim
     for _ in range(5):
-        gb.press("a", hold=8, settle=30)  # A confirms the aim -> throws
-        if shuriken_qty() == q0 - 1:
+        gb.press("a", hold=8, settle=30)  # A confirms -> throws
+        if shuriken() == q0 - 1:
             break
-    gb.expect(shuriken_qty() == q0 - 1, f"shuriken {q0} -> {shuriken_qty()}")
-    print("  throw consumed ammo")
+    gb.expect(shuriken() == q0 - 1, f"shuriken {q0} -> {shuriken()}")
+    print("  throw consumed ammo (from inventory)")
 
     # --- M10: display toggle -> world uses GFX tile indices 45..62
     def gfx_cells():
@@ -188,7 +194,7 @@ def main() -> int:
                     n += 1
         return n
     gb.expect(gfx_cells() == 0, "ASCII mode should have no gfx tiles")
-    menu_pick(4)                          # Display mode (index 4, after Log)
+    menu_pick(3)                          # Display mode (index 3, throw removed)
     gb.expect(gb.wait_screen(lambda rows: gb.rd("g_render_mode") == 1),
               "render mode flag not set")
     gb.tick(60)                           # let the repaint land
@@ -196,7 +202,7 @@ def main() -> int:
     gb.expect(n > 30, f"GFX mode shows only {n} gfx cells")
     gb.shot("m9_03_gfx_mode")
     # toggle back
-    menu_pick(4)                          # Display mode (index 4, after Log)
+    menu_pick(3)                          # Display mode (index 3, throw removed)
     gb.expect(gb.wait_screen(lambda rows: gb.rd("g_render_mode") == 0),
               "render mode flag not cleared")
     gb.tick(60)
@@ -204,7 +210,7 @@ def main() -> int:
     print(f"  GFX toggle ok ({n} gfx cells)")
 
     # --- suspend via menu (Save & quit, index 7 after Log)
-    menu_pick(7)
+    menu_pick(6)
     gb.expect(gb.wait_screen(lambda rows: any("Game saved" in r for r in rows)),
               "save popup never appeared")
     gb.press_until("a", lambda rows: any("> CONTINUE" in r for r in rows))

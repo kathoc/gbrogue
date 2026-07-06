@@ -84,6 +84,9 @@ def walk_to(gb, grid, goal, max_steps=500):
 
 def main() -> int:
     gb = GB()
+    # pin the seed so the floor layout is stable across unrelated tuning
+    _so = gb.addr("g_seed_override")
+    gb.pb.memory[_so] = 0x2D; gb.pb.memory[_so + 1] = 0x1D   # 0x1D2D
     gb.boot_game()
 
     # survival is not under test here; long walks meet mean monsters

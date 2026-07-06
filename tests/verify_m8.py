@@ -45,10 +45,10 @@ def main() -> int:
     gb.press_until("start", menu_on)
     for _ in range(20):
         cur = gb.cursor_row()
-        if cur == 9:                         # Save & quit row (2 + 7, after Log)
+        if cur == 8:                         # Save & quit row (2 + 6, throw removed)
             break
-        gb.press("down" if cur < 9 else "up", hold=6, settle=10)
-    gb.expect(gb.cursor_row() == 9, "menu cursor never reached Save & quit")
+        gb.press("down" if cur < 8 else "up", hold=6, settle=10)
+    gb.expect(gb.cursor_row() == 8, "menu cursor never reached Save & quit")
     gb.press("a", hold=8, settle=8)
     gb.expect(gb.wait_screen(lambda rows: any("Game saved" in r for r in rows)),
               "save popup never appeared")

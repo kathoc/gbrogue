@@ -58,7 +58,7 @@ def use_slot0(gb, mode):
     gb.press_until("select", lambda rows: pack_open(rows) and "close" in rows[17])
     gb.press("a", hold=8, settle=16)      # action submenu (primary verb)
     gb.press("a", hold=8, settle=24)      # execute the primary action
-    if mode == "wand":
+    if mode in ("wand", "fire"):
         gb.press("right", hold=6, settle=10)   # aim
         gb.press("a", hold=8, settle=24)       # fire
     # clear any follow-up popup / identify prompt, then make sure we are
@@ -84,9 +84,15 @@ def main() -> int:
             gb.pb.memory[gb.addr("g_hp")] = 99
             gb.pb.memory[gb.addr("g_maxhp")] = 99
             clear_pack(gb)
-            qty = 5 if mode == "wand" else (2 if mode == "consume" else 1)
+            # arrows(3)/dart(6)/shuriken(7) are now FIRED from the pack
+            # (wand-style aim), not wielded
+            eff_mode = mode
+            if name == "weapon" and sub in (3, 6, 7):
+                eff_mode = "fire"
+            qty = 5 if eff_mode in ("wand", "fire") else (
+                  2 if eff_mode == "consume" else 1)
             inject(gb, kind, sub, qty)
-            use_slot0(gb, mode)
+            use_slot0(gb, eff_mode)
 
             s = slot0(gb)
             hp = gb.rd("g_hp")
@@ -98,14 +104,18 @@ def main() -> int:
             if s["kind"] not in (ITEM_NONE, FOOD, POTION, SCROLL, WAND,
                                  RING, WEAPON, ARMOR):
                 raise Failure(f"{name}#{sub}: pack slot corrupted (kind={s['kind']})")
-            if mode in ("consume",):
+            if eff_mode == "consume":
                 ok = (s["kind"] == ITEM_NONE) or (s["qty"] < qty)
                 if not ok:
                     raise Failure(f"{name}#{sub}: not consumed (slot={s})")
-            elif mode == "wand":
+            elif eff_mode == "fire":
+                ok = (s["kind"] == ITEM_NONE) or (s["qty"] < qty)
+                if not ok:
+                    raise Failure(f"{name}#{sub}: ammo not consumed (slot={s})")
+            elif eff_mode == "wand":
                 if not (s["kind"] == WAND and s["qty"] < qty):
                     raise Failure(f"{name}#{sub}: charge not spent (slot={s})")
-            elif mode in ("wield", "wear"):
+            elif eff_mode in ("wield", "wear"):
                 worn = (s["flags"] & IF_WORN) != 0
                 eq = (gb.rd("g_wield") == 0) or (gb.rd("g_worn") == 0) or worn
                 if not eq:
