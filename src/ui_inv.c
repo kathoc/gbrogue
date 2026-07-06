@@ -232,7 +232,20 @@ uint8_t ui_inv_show(void) {
                     draw_line(old, cursor);
                     draw_line(cursor, cursor);
                     draw_desc(cursor, n);
-                    render_present();
+                    /* Partial redraws never reset the composed-tile pool,
+                       so distinct item/desc glyph pairs accumulate as you
+                       scroll. If drawing these rows just wrapped the pool,
+                       the rows we did NOT touch now point at recycled
+                       tiles (and set_cell won't re-flush them — it dedups
+                       by tile index, which is unchanged). Repaint the
+                       whole list from a fresh pool BEFORE presenting, so a
+                       corrupted frame is never shown. */
+                    if (g_t4_flushed) {
+                        g_t4_flushed = 0;
+                        draw_list(cursor);
+                    } else {
+                        render_present();
+                    }
                 }
             }
             if (n && (keys & J_A)) {
