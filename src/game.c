@@ -434,15 +434,20 @@ static void rank_record(void) {
     if (g_debug) return;
     e.gold = g_gold;
     e.deepest = g_deepest;
-    e.final = g_depth;
-    e.amulet = g_has_amulet;
     e.cause = g_death_sid;   /* 0 on a won run -> no cause line */
     e.mon = g_death_mon;
-    e.play_no = g_games_played;   /* which lifetime play this run was */
+    e.play_time = g_play_frames;   /* run duration (frozen when play() ended) */
+    e.seed = g_run_seed;
     rank_insert(&e);
 }
 
+/* VBLANK tick: the wall-clock play timer runs only during a live run. */
+static void play_clock(void) {
+    if (g_run_active) g_play_frames++;
+}
+
 void game_run(void) {
+    add_VBL(play_clock);
     for (;;) {
         uint8_t reason;
 
@@ -450,10 +455,12 @@ void game_run(void) {
             msg_clear();
             view_world_enter();
             games_played_load();   /* bring the lifetime counter into WRAM */
+            /* g_play_frames was restored by save_load — the timer resumes */
             msg_post_id(SID_WELCOME_BACK);
         } else {
             world_new();
             games_played_inc();    /* a new play: bump the lifetime counter */
+            g_play_frames = 0;     /* fresh run: reset the play timer */
             identify_new_game();
             inv_clear();
             inv_starting_kit();
@@ -461,6 +468,7 @@ void game_run(void) {
             new_level();
             msg_post_id(SID_WELCOME);
         }
+        g_run_active = 1;          /* start/resume the clock */
 
         status_update();
         msg_refresh();
@@ -472,6 +480,7 @@ void game_run(void) {
         render_fade_in(FADE_IN_FRAMES);    /* title faded out to here */
 
         reason = play();
+        g_run_active = 0;          /* freeze the clock at run end / suspend */
         bgm_stop();
         if (reason != END_SUSPENDED)
             rank_record();

@@ -25,6 +25,11 @@ uint8_t g_debug;         /* set at the title; not persisted */
    reproduced. */
 uint32_t g_seed_override;
 uint32_t g_run_seed;
+
+/* Wall-clock play timer: g_play_frames counts VBLANKs while g_run_active
+   is set (new game .. game over), carried across a suspend save. ~60/s. */
+uint32_t g_play_frames;
+uint8_t  g_run_active;
 uint8_t  g_repeat_speed = 1;
 uint16_t g_wander_t;
 uint8_t  g_lang = 1;     /* player setting — survives new games;

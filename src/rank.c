@@ -14,8 +14,9 @@
 /* Magic bumped on every SRAM-layout change so a stale block is cleared
    (a one-time ranking reset on upgrade) rather than misread:
    'K'(0x4B) original -> 'L'(0x4C) death-cause fields
-   -> 'M'(0x4D) games-played counter + per-entry play_no. */
-#define RB_MAGIC 0x4Du
+   -> 'M'(0x4D) games-played counter + per-entry play_no
+   -> 'N'(0x4E) per-entry play_time + seed (dropped final/amulet/play_no). */
+#define RB_MAGIC 0x4Eu
 #define ESZ      ((uint8_t)sizeof(rank_entry_t))
 #define HDR      3u                    /* magic(1) + games_played(2) */
 #define TOTAL    (uint8_t)(HDR + RANK_N * ESZ)

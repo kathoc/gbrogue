@@ -46,6 +46,11 @@ extern uint8_t g_debug;
 extern uint32_t g_seed_override;
 extern uint32_t g_run_seed;
 
+/* Wall-clock play timer (VBLANKs, ~60/s) accumulated while g_run_active;
+   frozen at game over and recorded into the ranking, saved on suspend. */
+extern uint32_t g_play_frames;
+extern uint8_t  g_run_active;
+
 /* Input repeat speed setting: 0 slow / 1 normal / 2 fast. Applies to
    held-D-pad walking and to the A+B rest repeat. */
 extern uint8_t  g_repeat_speed;

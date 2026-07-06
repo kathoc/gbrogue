@@ -17,7 +17,7 @@
  */
 #define SRAM ((uint8_t *)0xA000)
 #define SAVE_MAGIC 0x47u          /* 'G' */
-#define SAVE_VER   3u
+#define SAVE_VER   4u          /* +play_frames +run_seed chunks */
 
 /* identify.c state (exposed for tests + save) */
 extern uint8_t  g_id_alias[4][14];
@@ -68,6 +68,8 @@ static const chunk_row_t CHUNKS[] = {
     { &g_repeat_speed, 1 },
     { &g_wander_t, 2 },
     { &g_lang, 1 },
+    { &g_play_frames, 4 },        /* carry the play timer across a suspend */
+    { &g_run_seed, 4 },           /* keep the seed so it shows post-resume */
 };
 #define N_CHUNKS (sizeof(CHUNKS) / sizeof(CHUNKS[0]))
 

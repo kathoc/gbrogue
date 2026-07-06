@@ -17,13 +17,12 @@
 
 typedef struct {
     uint16_t gold;
-    uint8_t  deepest;   /* deepest floor reached */
-    uint8_t  final;     /* floor at run end */
-    uint8_t  amulet;    /* 1 if the Amulet was obtained (climb-back form) */
-    uint8_t  cause;     /* SID_DEATH_* of the fatal blow, 0 = survived/won */
-    uint8_t  mon;       /* monster kind when cause == SID_DEATH_MON */
-    uint16_t play_no;   /* lifetime games-played count when this run ended */
-} rank_entry_t;
+    uint8_t  deepest;    /* deepest floor reached (also the occupied marker) */
+    uint8_t  cause;      /* SID_DEATH_* of the fatal blow, 0 = survived/won */
+    uint8_t  mon;        /* monster kind when cause == SID_DEATH_MON */
+    uint32_t play_time;  /* run duration, VBLANK frames (~60/s) */
+    uint32_t seed;       /* the run's 8-hex-digit seed */
+} rank_entry_t;          /* 13 bytes */
 
 /* BANK0 shims (bank_api.c) — the only entry points the game calls. */
 uint8_t rank_read(rank_entry_t *out);       /* fills out[]; returns count */
