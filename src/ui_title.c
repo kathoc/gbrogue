@@ -60,22 +60,22 @@ static uint8_t item_sid(uint8_t i, uint8_t n) {
     return SID_TITLE_NEW;
 }
 
-/* Hex-digit seed editor reached from the title. D-pad L/R moves between
-   the four digits, U/D changes the current one, A confirms (pins the seed
-   for the next new game), B cancels. */
-static void draw_seed(uint16_t v, uint8_t cur) {
-    char buf[8];
-    char cus[8];
+/* 8-hex-digit (32-bit) seed editor reached from the title. D-pad L/R moves
+   between the eight digits, U/D changes the current one, A confirms (pins
+   the seed for the next new game), B cancels. */
+static void draw_seed(uint32_t v, uint8_t cur) {
+    char buf[10];
+    char cus[10];
     uint8_t d;
     render_clear_all();
     render_text(MENU_COL, 6, lang_str(SID_TITLE_SEED));
-    for (d = 0; d < 4u; d++) {
-        uint8_t nib = (uint8_t)((v >> ((3u - d) * 4u)) & 0xFu);
+    for (d = 0; d < 8u; d++) {
+        uint8_t nib = (uint8_t)((v >> ((7u - d) * 4u)) & 0xFu);
         buf[d] = (char)(nib < 10u ? '0' + nib : 'A' + (nib - 10u));
         cus[d] = (d == cur) ? '^' : ' ';
     }
-    buf[4] = 0;
-    cus[4] = 0;
+    buf[8] = 0;
+    cus[8] = 0;
     render_text(MENU_COL, 8, buf);
     render_text(MENU_COL, 9, cus);
     render_status(lang_str(SID_MENU_HINT));
@@ -83,7 +83,7 @@ static void draw_seed(uint16_t v, uint8_t cur) {
 }
 
 static void edit_seed(void) {
-    uint16_t v = g_seed_override ? g_seed_override : g_run_seed;
+    uint32_t v = g_seed_override ? g_seed_override : g_run_seed;
     uint8_t cur = 0;
     render_set_world(0);
     draw_seed(v, cur);
@@ -95,14 +95,13 @@ static void edit_seed(void) {
         keys = input_pressed();
         if (keys & J_B) break;                       /* cancel */
         if (keys & J_A) { g_seed_override = v; break; }  /* confirm + pin */
-        if (keys & J_LEFT)  { cur = (uint8_t)((cur + 3u) & 3u); draw_seed(v, cur); }
-        if (keys & J_RIGHT) { cur = (uint8_t)((cur + 1u) & 3u); draw_seed(v, cur); }
+        if (keys & J_LEFT)  { cur = (uint8_t)((cur + 7u) & 7u); draw_seed(v, cur); }
+        if (keys & J_RIGHT) { cur = (uint8_t)((cur + 1u) & 7u); draw_seed(v, cur); }
         if (keys & (J_UP | J_DOWN)) {
-            uint8_t sh = (uint8_t)((3u - cur) * 4u);
+            uint8_t sh = (uint8_t)((7u - cur) * 4u);
             uint8_t nib = (uint8_t)((v >> sh) & 0xFu);
             nib = (uint8_t)(((keys & J_UP) ? nib + 1u : nib + 15u) & 0xFu);
-            v = (uint16_t)((v & (uint16_t)~((uint16_t)0xFu << sh))
-                           | ((uint16_t)nib << sh));
+            v = (v & ~((uint32_t)0xFu << sh)) | ((uint32_t)nib << sh);
             draw_seed(v, cur);
         }
     }
@@ -215,15 +214,18 @@ uint8_t ui_title_show(void) {
             {
                 uint8_t cont = (uint8_t)(s_can && sel == 0u);
                 if (!cont) {
-                    uint16_t seed;
-                    if (g_seed_override) seed = g_seed_override;
+                    uint32_t s32;
+                    if (g_seed_override) s32 = g_seed_override;
 #ifdef GBR_DEBUG_KIT
-                    else seed = GBR_TEST_SEED;   /* stable maps for the suite */
+                    else s32 = GBR_TEST_SEED;    /* stable maps for the suite */
 #else
-                    else seed = (uint16_t)(((uint16_t)DIV_REG << 8) | frames);
+                    else s32 = (uint16_t)(((uint16_t)DIV_REG << 8) | frames);
 #endif
-                    rng_seed(seed);
-                    g_run_seed = seed;           /* record for display/repro */
+                    g_run_seed = s32;            /* full 8-digit seed, for repro */
+                    /* the RNG state is 16-bit; fold the 32-bit seed into it so
+                       all eight hex digits influence the run (a 16-bit-only
+                       seed like the debug pin folds to itself) */
+                    rng_seed((uint16_t)(s32 ^ (s32 >> 16)));
                 }
                 render_fade_out(FADE_OUT_FRAMES);
                 render_art_end();

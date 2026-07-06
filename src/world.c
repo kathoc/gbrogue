@@ -23,8 +23,8 @@ uint8_t g_debug;         /* set at the title; not persisted */
    world_new). g_seed_override != 0 forces that seed for the next new
    game; g_run_seed records the seed actually used so it can be shown and
    reproduced. */
-uint16_t g_seed_override;
-uint16_t g_run_seed;
+uint32_t g_seed_override;
+uint32_t g_run_seed;
 uint8_t  g_repeat_speed = 1;
 uint16_t g_wander_t;
 uint8_t  g_lang = 1;     /* player setting — survives new games;
