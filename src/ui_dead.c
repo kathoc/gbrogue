@@ -87,13 +87,13 @@ void ui_dead_show(void) {
     *p = 0;
     render_text(5, 12, buf);
     draw_score(13);
-    /* the run's seed, so a memorable run can be replayed from the title */
+    /* the run's 8-hex-digit seed, so a memorable run can be replayed */
     {
-        char sb[12];
+        char sb[16];
         char *q = fmt_str(sb, "seed ");
         uint8_t d;
-        for (d = 0; d < 4u; d++) {
-            uint8_t nib = (uint8_t)((g_run_seed >> ((3u - d) * 4u)) & 0xFu);
+        for (d = 0; d < 8u; d++) {
+            uint8_t nib = (uint8_t)((g_run_seed >> ((7u - d) * 4u)) & 0xFu);
             *q++ = (char)(nib < 10u ? '0' + nib : 'A' + (nib - 10u));
         }
         *q = 0;
@@ -110,13 +110,20 @@ void ui_dead_show(void) {
 }
 
 void ui_win_show(void) {
-    /* Same clean swap as the death screen: fade out over the world, build
-       the victory screen, then wait_start() fades it in. */
+    /* Full-screen CONGRATULATIONS art, same clean swap as the death
+       screen: fade to black, blit the art behind it, then wait_start()
+       fades it in. The art fills rows 0..12; the score + prompt sit
+       below it. */
     render_fade_out(FADE_OUT_FRAMES);
     render_set_world(0);
     render_clear_all();
-    render_text(3, 3, lang_str(SID_WON));
-    render_text(1, 6, lang_str(SID_WON_SUB));
-    draw_score(9);
-    wait_start(13, "- START -", SID_VICTORY);
+    render_art_begin();
+    art_blit(BANK(art_congrats_tiles), art_congrats_tiles, ART_CONGRATS_TILES,
+             art_congrats_map, ART_CONGRATS_ROWS);
+    draw_score(14);
+    wait_start(15, "- START -", SID_VICTORY);
+    /* blank before the tileset reload repaints art cells with glyphs */
+    render_clear_all();
+    render_present();
+    render_art_end();
 }

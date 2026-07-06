@@ -28,6 +28,7 @@ IMAGES = [
     # (c name, png, padded tile rows)
     ("art_title", "gbrogue_titile.png", 18),
     ("art_over", "gbrogue_gameover.png", 12),
+    ("art_congrats", "congratulations.png", 13),
 ]
 
 
@@ -85,13 +86,14 @@ def main() -> None:
         " * GENERATED FILE — see scripts/gen_art.py",
         " *",
         " * Full-screen art tiles + cell maps (map bytes are final VRAM",
-        " * slots). Lives in ROM bank 2; ui_art.c blits through the",
-        " * far-copy trampoline.",
+        " * slots). Lives in ROM bank 4 (its own bank — BANK2 is full);",
+        " * ui_art.c blits through the far-copy trampoline, which maps the",
+        " * art's bank via BANKREF, so any bank works.",
         " */",
         "#include <gb/gb.h>",
         "#include <stdint.h>",
         "",
-        "#pragma bank 2",
+        "#pragma bank 4",
         "",
     ]
     parts_h = [
