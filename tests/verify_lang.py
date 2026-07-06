@@ -27,9 +27,11 @@ def main() -> int:
     gb.expect(gb.wait_screen(lambda rows: any("> はじめる" in r for r in rows)),
               "title not in Japanese by default")
     gb.expect_on_screen("LANGUAGE:JPN")
-    # rows are NEW GAME(0) / RANKING(1) / LANGUAGE(2): step down twice
-    gb.press("down", hold=8, settle=20)        # onto RANKING
-    gb.press("down", hold=8, settle=20)        # onto LANGUAGE
+    # NEW GAME(0) / RANKING(1) / SEED(2) / LANGUAGE(3): step down onto it
+    for _ in range(4):
+        if any("> LANGUAGE" in r for r in gb.screen_rows()):
+            break
+        gb.press("down", hold=8, settle=20)
     gb.expect(gb.wait_screen(
         lambda rows: any("> LANGUAGE:JPN" in r for r in rows)),
         "LANGUAGE row never took the cursor")

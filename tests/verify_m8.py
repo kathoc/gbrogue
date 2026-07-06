@@ -34,6 +34,10 @@ def main() -> int:
     # play a little so the state is distinctive
     for btn in ("right", "down", "right", "a", "left"):
         gb.press(btn, hold=6, settle=10)
+    # let the last step's glide/held-walk settle before snapshotting, else
+    # a straggler move lands between the snapshot and the suspend and the
+    # resume check sees an off-by-one position (map-timing sensitive).
+    gb.tick(30)
     pre = snapshot(gb)
 
     # --- suspend (START menu -> Save & quit, closed-loop cursor)
@@ -82,7 +86,8 @@ def main() -> int:
         if gb.rd("g_hp") == 0:
             break
     gb.expect(gb.rd("g_hp") == 0, "could not force death")
-    gb.expect(gb.wait_screen(lambda rows: any("R.I.P." in r for r in rows)),
+    # the death screen fades in slowly now (deliberate), so give it room
+    gb.expect(gb.wait_screen(lambda rows: any("R.I.P." in r for r in rows), 360),
               "game-over screen never appeared")
     gb.shot("m8_03_dead")
     gb.press_until("start", lambda rows: any("NEW GAME" in r for r in rows))
