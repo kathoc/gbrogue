@@ -40,6 +40,8 @@ void status_update(void) {
     char *p = buf;
     p = fmt_char(p, 'B');
     p = fmt_u16(p, g_depth);
+    p = fmt_str(p, " LV");                        /* level, just left of HP */
+    p = fmt_u16(p, g_level);
     p = fmt_str(p, " ");
     g_hp_col0 = (uint8_t)((p - buf) / 2u);       /* "HP..." starts here */
     p = fmt_str(p, "HP");
@@ -51,8 +53,7 @@ void status_update(void) {
     p = fmt_u16(p, g_str);
     p = fmt_str(p, " AC");
     p = fmt_u16(p, g_ac);
-    p = fmt_str(p, " G");
-    p = fmt_u16(p, g_gold);
+    /* gold is shown in the inventory now, not on the status row */
     {
         /* active effects, at most three: " 速/混/盲" or " hast/conf" */
         uint8_t i, n = 0;
