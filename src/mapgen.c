@@ -233,12 +233,17 @@ static void place_one_item(const room_t *rm) {
     item_t *it;
     if (!free_spot(rm, &x, &y)) return;
     r = rng_byte();
-    if (r < 70u)       it = item_place(IK_POTION, rng_range(N_POTIONS), x, y);
-    else if (r < 140u) it = item_place(IK_SCROLL, rng_range(N_SCROLLS), x, y);
-    else if (r < 186u) it = item_place(IK_FOOD, rng_byte() < 200u ? 0 : 1, x, y);
-    else if (r < 209u) it = item_place(IK_WEAPON, rng_range(N_WEAPONS), x, y);
-    else if (r < 232u) it = item_place(IK_ARMOR, rng_range(N_ARMORS), x, y);
-    else if (r < 244u) it = item_place(IK_RING, rng_range(N_RINGS), x, y);
+    if (r < 60u)       it = item_place(IK_POTION, rng_range(N_POTIONS), x, y);
+    else if (r < 110u) it = item_place(IK_SCROLL, rng_range(N_SCROLLS), x, y);
+    else if (r < 150u) it = item_place(IK_FOOD, rng_byte() < 200u ? 0 : 1, x, y);
+    else if (r < 205u) {           /* weapons: much more common now, and the
+                                      abolished bow (sub 2) becomes arrows */
+        uint8_t sub = rng_range(N_WEAPONS);
+        if (sub == 2u) sub = WS_ARROW;
+        it = item_place(IK_WEAPON, sub, x, y);
+    }
+    else if (r < 228u) it = item_place(IK_ARMOR, rng_range(N_ARMORS), x, y);
+    else if (r < 242u) it = item_place(IK_RING, rng_range(N_RINGS), x, y);
     else               it = item_place(IK_WAND, rng_range(N_WANDS), x, y);
     if (!it) return;
 

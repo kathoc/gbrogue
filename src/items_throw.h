@@ -3,9 +3,10 @@
 
 #include <stdint.h>
 
-/* Fire/throw: arrows with a wielded bow, else darts / shuriken.
-   Prompts for a direction. Returns turns consumed. */
-uint8_t items_throw(void);
+/* Fire/throw the ammo in pack slot `slot` (arrows / darts / shuriken):
+   prompts for a direction, then the projectile flies. No bow needed.
+   Returns turns consumed (0 = aim cancelled). */
+uint8_t items_fire(uint8_t slot);
 
 /* --- BANK2 relocation ---
    The post-aim projectile flight + hit lives in items_throw_fx.c

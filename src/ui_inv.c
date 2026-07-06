@@ -108,8 +108,10 @@ static void draw_list(uint8_t cursor) {
    item kind (and whether it is currently equipped). */
 static uint8_t action_hint_sid(const item_t *it) {
     switch (it->kind) {
-    case IK_WEAPON: return (it->flags & IF_WORN) ? SID_ACT_REMOVE
-                                                 : SID_ACT_WEAPON;
+    case IK_WEAPON:
+        if (it->sub == WS_ARROW)     return SID_ACT_FIRE;    /* はなつ */
+        if (WS_THROWABLE(it->sub))   return SID_ACT_THROW;   /* なげる */
+        return (it->flags & IF_WORN) ? SID_ACT_REMOVE : SID_ACT_WEAPON;
     case IK_ARMOR:  return (it->flags & IF_WORN) ? SID_ACT_REMOVE
                                                  : SID_ACT_ARMOR;
     case IK_RING:   return (it->flags & IF_WORN) ? SID_ACT_REMOVE

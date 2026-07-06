@@ -8,7 +8,6 @@
 #include "msg.h"
 #include "lang.h"
 #include "traps.h"
-#include "items_throw.h"
 #include "ui_log.h"
 #include "util.h"
 #include "sfx.h"
@@ -16,17 +15,19 @@
 
 /* Entry order (cursor index). ENTRY_* below must match. Single-line rows
    2.. fit well under the title. */
-#define N_ENTRIES 8
+/* Throwing/firing moved to the inventory (select ammo -> A), so the menu
+   no longer has a Throw entry. */
+#define N_ENTRIES 7
 
 static const uint8_t ENTRY_SID[N_ENTRIES] = {
-    SID_MENU_REST, SID_MENU_SEARCH, SID_MENU_THROW, SID_MENU_LOG,
+    SID_MENU_REST, SID_MENU_SEARCH, SID_MENU_LOG,
     SID_MENU_DISPLAY, SID_MENU_SPEED, SID_MENU_LANG,
     SID_MENU_QUIT,
 };
-#define ENTRY_LOG   3u
-#define ENTRY_SPEED 5u
-#define ENTRY_LANG  6u
-#define ENTRY_QUIT  7u
+#define ENTRY_LOG   2u
+#define ENTRY_SPEED 4u
+#define ENTRY_LANG  5u
+#define ENTRY_QUIT  6u
 
 static void draw_entry(uint8_t i, uint8_t cursor) {
     char buf[32];
@@ -117,22 +118,11 @@ uint8_t ui_menu_show(void) {
                 traps_search();
                 render_present();
                 return MENU_REST;
-            case 2: {                        /* throw */
-                uint8_t t;
-                restore_world();
-                t = items_throw();
-                msgq_flush();  /* render deferred throw messages */
-                view_sync_sprites();
-                status_update();
-                render_present();
-                input_swallow_edges();
-                return t ? MENU_REST : MENU_CANCEL;
-            }
             case ENTRY_LOG:                  /* message-log viewer */
                 ui_log_show();
                 restore_world();
                 return MENU_CANCEL;
-            case 4:                          /* display toggle (M10) */
+            case 3:                          /* display toggle (M10) */
                 render_toggle_mode();
                 restore_world();
                 return MENU_CANCEL;

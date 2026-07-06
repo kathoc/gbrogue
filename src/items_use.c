@@ -3,6 +3,7 @@
 #include "items.h"
 #include "items_data.h"
 #include "items_zap.h"
+#include "items_throw.h"
 #include "inventory.h"
 #include "identify.h"
 #include "world.h"
@@ -43,6 +44,11 @@ uint8_t items_use(uint8_t slot) {
     case IK_WAND:
         return items_zap(slot);
     case IK_WEAPON:
+        /* arrows/darts/shuriken are fired/thrown (wand-style aim); other
+           weapons are wielded */
+        if (WS_THROWABLE(it->sub))
+            return items_fire(slot);
+        /* fall through */
     case IK_ARMOR:
     case IK_RING:
         return inv_equip(slot);

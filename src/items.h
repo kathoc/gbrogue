@@ -19,6 +19,15 @@ enum {
 #define N_ARMORS  8
 #define N_FOODS   2
 
+/* WEAPON subtypes (item.sub). The bow (2) is abolished: arrows fire on
+   their own. Arrows, darts and shuriken are thrown/fired; the rest are
+   melee weapons that get wielded. */
+#define WS_ARROW        3u
+#define WS_DART         6u
+#define WS_SHURIKEN     7u
+#define WS_THROWABLE(sub) \
+    ((sub) == WS_ARROW || (sub) == WS_DART || (sub) == WS_SHURIKEN)
+
 /* item flags */
 #define IF_CURSED       0x01u
 #define IF_KNOWN_CURSED 0x02u
