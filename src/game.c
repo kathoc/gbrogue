@@ -373,7 +373,10 @@ static uint8_t climb_action(void) {
 }
 
 static void new_level(void) {
-    mapgen_generate();
+    /* Level generation lives in BANK2 (mapgen.c); hop in via call_bank. All
+       its callees are bank 0 and it renders nothing — the view repaint below
+       runs after call_bank returns (bank 1 remapped). */
+    call_bank(2u, mapgen_generate);
     mons_spawn_level();
     view_player_moved();
     view_world_enter();

@@ -1,3 +1,5 @@
+#include <gb/gb.h>
+#pragma bank 2
 #include "mapgen.h"
 #include "map.h"
 #include "world.h"
@@ -6,6 +8,13 @@
 #include "traps.h"
 
 /*
+ * BANK2. The level generator, out of the full HOME bank. Reached via
+ * call_bank(2, mapgen_generate) from new_level() in game.c (HOME). call_bank
+ * maps bank 2 over bank 1, so every callee here is in the fixed bank 0 (rng,
+ * map_*, item_*, traps_add/clear) and none render — new_level() repaints the
+ * world (view_player_moved / view_world_enter) AFTER call_bank returns. The
+ * grid_col/grid_row loops avoid the bank-1 div helpers (see below).
+ *
  * Rogue 5.4-style generation: a 3x3 grid of cells, one room (or a
  * "gone" corridor junction) per cell, corridors along a random spanning
  * tree of the grid plus a couple of extra links.
