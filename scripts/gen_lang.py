@@ -39,7 +39,7 @@ BTN_ST = _STL + _STR      # START: two 8x8 tiles
 BTN_SE = _SEL + _SER      # SELECT: two 8x8 tiles
 BUTTON_GLYPHS = {
     _A:   [0x7C, 0xE6, 0xDA, 0xC2, 0xDA, 0xDA, 0x7C, 0x00],  # A
-    _B:   [0x7C, 0xC6, 0xDA, 0xC6, 0xDA, 0xC6, 0x7E, 0x00],  # B
+    _B:   [0x7C, 0xC6, 0xDA, 0xC6, 0xDA, 0xC6, 0x7C, 0x00],  # B
     _STL: [0x7F, 0xE0, 0xDD, 0xC5, 0xF5, 0xCD, 0x7F, 0x00],  # START L
     _STR: [0xFC, 0x22, 0x56, 0x36, 0x56, 0x56, 0xFC, 0x00],  # START R
     _SEL: [0x7F, 0xE4, 0xDD, 0xC4, 0xF5, 0xCC, 0x7F, 0x00],  # SELECT L
@@ -300,6 +300,9 @@ S = [
     ("HINT_CANCEL",  f"{BTN_B}cancel", f"{BTN_B}やめる"),
     # after the Amulet: descend (A) or climb toward the surface (B)
     ("HINT_BOTH",    f"{BTN_A}down {BTN_B}up", f"{BTN_A}おりる {BTN_B}のぼる"),
+    # post-Amulet the stairs hint alternates HINT_ASCEND (B) and
+    # HINT_DESCEND (A) every 60 frames; ascend is climb-toward-surface
+    ("HINT_ASCEND",  f"{BTN_B}up",   f"{BTN_B}のぼる"),
     # game-over causes (natural sentences, not raw log lines)
     ("DEATH_MON",    "Slain by the %s",       "%sに たおされた"),
     ("DEATH_ARROW",  "Killed by an arrow trap", "やのワナで しんだ"),
