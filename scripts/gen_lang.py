@@ -60,6 +60,7 @@ S = [
     ("TITLE_CONT",     "CONTINUE",             "つづきから"),
     ("MENU_RANK",      "RANKING",              "ランキング"),
     ("RANK_TITLE",     "- RANKING -",          "- ランキング -"),
+    ("RANK_LEGEND",    "rank G=gold B=floor cause plays", "G:きんか B:ちか しいん プレイ"),
     ("RANK_EMPTY",     "no records yet",       "きろくなし"),
     ("RANK_ESCAPED",   "escaped!",             "だっしゅつ!"),
     ("RANK_PLAY",      "play",                 "かい"),

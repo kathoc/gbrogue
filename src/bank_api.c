@@ -27,6 +27,14 @@ void rank_insert(const rank_entry_t *e) {
     call_bank(5u, bank_rank_insert);
 }
 
+void games_played_inc(void) {
+    call_bank(5u, bank_games_inc);
+}
+
+void games_played_load(void) {
+    call_bank(5u, bank_games_load);
+}
+
 /* --- suspend save (BANK5) --- */
 
 uint8_t save_exists(void) {

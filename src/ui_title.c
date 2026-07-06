@@ -137,9 +137,16 @@ uint8_t ui_title_show(void) {
         if (keys & (J_START | J_A)) {
             if (sel == rank_row) {
                 sfx_play(SFX_MENU);
-                render_art_end();          /* restore text tileset */
+                /* Fade the title out BEFORE swapping the tileset: both
+                   render_art_end() and paint_title()'s art_blit stream
+                   tile PATTERN data straight to VRAM (set_bkg_data),
+                   which tears if done on the lit title. ui_rank_show()
+                   fades itself in and back out to black. */
+                render_fade_out(FADE_OUT_FRAMES);
+                render_art_end();          /* restore text tileset (dark) */
                 ui_rank_show();
-                paint_title(sel, n_items); /* repaint the title art */
+                paint_title(sel, n_items); /* rebuild the title art (dark) */
+                render_fade_in(FADE_IN_FRAMES);
                 input_swallow_edges();
                 continue;
             }

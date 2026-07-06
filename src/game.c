@@ -435,6 +435,7 @@ static void rank_record(void) {
     e.amulet = g_has_amulet;
     e.cause = g_death_sid;   /* 0 on a won run -> no cause line */
     e.mon = g_death_mon;
+    e.play_no = g_games_played;   /* which lifetime play this run was */
     rank_insert(&e);
 }
 
@@ -445,9 +446,11 @@ void game_run(void) {
         if (ui_title_show() && save_load()) {
             msg_clear();
             view_world_enter();
+            games_played_load();   /* bring the lifetime counter into WRAM */
             msg_post_id(SID_WELCOME_BACK);
         } else {
             world_new();
+            games_played_inc();    /* a new play: bump the lifetime counter */
             identify_new_game();
             inv_clear();
             inv_starting_kit();
