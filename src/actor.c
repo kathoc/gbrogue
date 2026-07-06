@@ -131,6 +131,17 @@ static uint8_t cell_free(uint8_t x, uint8_t y) {
     return mon_at(x, y) == 0;
 }
 
+/* Like cell_free but a chasing monster MAY briefly stand on the down
+   staircase. Spawn/wander placement uses cell_free (keeps the stairs
+   clear at rest); only the chase step uses this, so a hero cornered on
+   a door beside the stairs can still be reached from the front instead
+   of the monster stalling one diagonal away. */
+static uint8_t cell_step_free(uint8_t x, uint8_t y) {
+    if (!map_walkable(x, y)) return 0;
+    if (x == g_px && y == g_py) return 0;
+    return mon_at(x, y) == 0;
+}
+
 void mons_spawn_level(void) {
     uint8_t r, slot = 0;
     dm_px = 0xFFu;                     /* new terrain: drop the cache */
@@ -201,7 +212,7 @@ static void mon_step(monster_t *m) {
             uint8_t ny = (uint8_t)(m->y + DY8[k]);
             if (nx >= MAP_W || ny >= MAP_H) continue;
             if (g_dist[ny][nx] >= best) continue;
-            if (!cell_free(nx, ny)) continue;
+            if (!cell_step_free(nx, ny)) continue;
             if (!mon_can_reach(m->x, m->y, nx, ny)) continue;
             best = g_dist[ny][nx];
             bx = nx;
@@ -217,18 +228,18 @@ static void mon_step(monster_t *m) {
         if (m->y < g_py) sy = 1; else if (m->y > g_py) sy = -1;
     }
     /* Diagonal first, then each axis — greedy like Rogue's chase. */
-    if (sx && sy && cell_free((uint8_t)(m->x + sx), (uint8_t)(m->y + sy)) &&
+    if (sx && sy && cell_step_free((uint8_t)(m->x + sx), (uint8_t)(m->y + sy)) &&
         map_diag_ok(m->x, m->y,
                     (uint8_t)(m->x + sx), (uint8_t)(m->y + sy))) {
         m->x = (uint8_t)(m->x + sx);
         m->y = (uint8_t)(m->y + sy);
         return;
     }
-    if (sx && cell_free((uint8_t)(m->x + sx), m->y)) {
+    if (sx && cell_step_free((uint8_t)(m->x + sx), m->y)) {
         m->x = (uint8_t)(m->x + sx);
         return;
     }
-    if (sy && cell_free(m->x, (uint8_t)(m->y + sy))) {
+    if (sy && cell_step_free(m->x, (uint8_t)(m->y + sy))) {
         m->y = (uint8_t)(m->y + sy);
         return;
     }
