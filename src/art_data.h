@@ -5,7 +5,7 @@
 #include <gb/gb.h>
 #include <stdint.h>
 
-#define ART_TITLE_TILES 214u
+#define ART_TITLE_TILES 203u
 #define ART_TITLE_ROWS  18u
 BANKREF_EXTERN(art_title_tiles)
 extern const uint8_t art_title_tiles[];
