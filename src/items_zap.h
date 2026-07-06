@@ -12,9 +12,10 @@ uint8_t items_zap(uint8_t slot);
    prompt was cancelled (no turn spent). */
 extern uint8_t g_zap_prompted;
 
-/* Shared modal direction prompt (B cancels). 8-way: hold two D-pad
-   directions together for a diagonal. */
-uint8_t items_prompt_dir(int8_t *dx, int8_t *dy);
+/* Shared 8-way aim prompt on the live world: a blinking arrow cursor on
+   the player, D-pad to turn it (hold two for a diagonal), A confirms and
+   fires, B cancels. verb_sid labels the log line ("<verb> which way?"). */
+uint8_t items_prompt_dir(int8_t *dx, int8_t *dy, uint8_t verb_sid);
 
 /* --- BANK2 relocation ---
    The post-aim wand effect lives in items_zap_fx.c (#pragma bank 2),

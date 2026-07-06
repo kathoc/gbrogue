@@ -44,7 +44,7 @@ uint8_t items_throw(void) {
         msgq_id(SID_TH_NOTHING);
         return 0;
     }
-    if (!items_prompt_dir(&dx, &dy)) return 0;
+    if (!items_prompt_dir(&dx, &dy, SID_AIM_THROW)) return 0;
     g_throw_slot = slot;
     g_throw_bonus = bonus;
     g_throw_dx = dx;

@@ -34,6 +34,9 @@ void view_worldpaint_around(void);           /* 3x3 around the player */
 /* Assign sprite tiles/visibility/positions for player + monsters,
    using the current hardware scroll. */
 void view_sync_sprites(void);
+/* Blinking aim cursor overlaid on the player while choosing a throw/zap
+   direction; (dx,dy) is the current selection, visible drives the blink. */
+void view_aim_cursor(int8_t dx, int8_t dy, uint8_t visible);
 /* Call once per frame from the play loop: actors bob one pixel on a
    ~0.5s cycle (phase-shifted per actor) so they look alive. */
 void view_breathe(void);

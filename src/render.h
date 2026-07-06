@@ -14,9 +14,17 @@
 #define WORLD_W 32          /* == MAP_W */
 #define WORLD_H 28          /* == MAP_H */
 
-/* Sprite slots: 0 = player, 1.. = monsters. */
+/* Sprite slots: 0 = player, 1..12 = monsters, 13 = aiming cursor. */
 #define SPR_PLAYER 0
 #define SPR_MON0   1
+#define SPR_CURSOR 13u
+
+/* Aiming cursor overlay (throw / zap). render_aim_cursor loads the arrow
+   for direction dir (0..7: UP,DN,LT,RT,UL,UR,DL,DR) into the reserved
+   cursor tile and parks the cursor sprite at screen pixel (sx,sy);
+   render_aim_hide removes it. */
+void render_aim_cursor(uint8_t dir, uint8_t sx, uint8_t sy);
+void render_aim_hide(void);
 
 /* 0 = ASCII tileset, 1 = graphic tileset (defined in render.c). */
 extern uint8_t g_render_mode;

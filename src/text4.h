@@ -15,7 +15,9 @@
 #define MSGROW_BASE  63u
 #define MSGROW_TILES 20u
 #define T4_BASE  83u                  /* dynamic composed-text pool */
-#define T4_COUNT (256u - T4_BASE)     /* 173 dynamic slots */
+/* Tile 255 is reserved for the aiming cursor overlay (render.c), so the
+   composed-text pool stops one short of the top. */
+#define T4_COUNT (255u - T4_BASE)     /* 172 dynamic slots */
 
 /* VRAM tile for the pair (a,b). Both spaces -> the shared blank. */
 uint8_t t4_pair(char a, char b);

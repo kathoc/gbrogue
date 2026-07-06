@@ -130,7 +130,7 @@ static uint32_t g_world_dirty;       /* bit y = world row y dirty */
 #define WIN_ROWS 2u
 static uint8_t  g_win[WIN_ROWS][SCREEN_W];
 static uint8_t  g_win_dirty;
-#define N_SPRITES 13u                /* player + MAX_MONSTERS */
+#define N_SPRITES 14u                /* player + MAX_MONSTERS + aim cursor */
 
 static uint8_t tile_for_char(char c) {
     uint8_t u = (uint8_t)c;
@@ -358,6 +358,43 @@ void render_scroll(uint8_t x, uint8_t y) {
 static void sprite_colorize(uint8_t i) {
     if (g_is_gbc)
         set_sprite_prop(i, i == SPR_PLAYER ? 0u : 1u);
+}
+
+/* ---------------------------------------------------- aiming cursor
+ * An 8x8 arrow overlaid on the player's tile while aiming a throw/zap.
+ * The eight direction glyphs (baked from samples/*cursor.png) are loaded
+ * on demand into the reserved cursor tile; only a change of direction
+ * touches VRAM, so blinking is a pure OAM show/hide. */
+#define CURSOR_TILE 255u
+static const uint8_t CURSOR_ARROWS[8][8] = {
+    { 0x10, 0x28, 0, 0, 0, 0, 0, 0 },        /* UP */
+    { 0, 0, 0, 0, 0, 0x28, 0x10, 0 },        /* DN */
+    { 0, 0, 0x40, 0x80, 0x40, 0, 0, 0 },     /* LT */
+    { 0, 0, 0x04, 0x02, 0x04, 0, 0, 0 },     /* RT */
+    { 0xC0, 0x80, 0, 0, 0, 0, 0, 0 },        /* UL */
+    { 0x06, 0x02, 0, 0, 0, 0, 0, 0 },        /* UR */
+    { 0, 0, 0, 0, 0, 0x80, 0xC0, 0 },        /* DL */
+    { 0, 0, 0, 0, 0, 0x02, 0x06, 0 },        /* DR */
+};
+static uint8_t aim_last_dir = 0xFFu;
+
+void render_aim_cursor(uint8_t dir, uint8_t sx, uint8_t sy) {
+    if (dir != aim_last_dir) {
+        uint8_t buf[16], r;
+        for (r = 0; r < 8u; r++) {         /* 1bpp glyph -> both planes */
+            buf[r * 2u] = CURSOR_ARROWS[dir][r];
+            buf[r * 2u + 1u] = CURSOR_ARROWS[dir][r];
+        }
+        set_bkg_data(CURSOR_TILE, 1, buf);
+        aim_last_dir = dir;
+    }
+    set_sprite_tile(SPR_CURSOR, CURSOR_TILE);
+    if (g_is_gbc) set_sprite_prop(SPR_CURSOR, 0u);   /* player palette */
+    render_sprite_pos(SPR_CURSOR, sx, sy);
+}
+
+void render_aim_hide(void) {
+    render_sprite_hide(SPR_CURSOR);
 }
 
 void render_sprite_glyph(uint8_t i, char c) {

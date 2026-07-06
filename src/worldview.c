@@ -175,6 +175,25 @@ static uint8_t mon_breath_period(const monster_t *m) {
     return 32u;
 }
 
+/* Map a step vector to a cursor-arrow index (UP,DN,LT,RT,UL,UR,DL,DR). */
+static uint8_t aim_dir(int8_t dx, int8_t dy) {
+    if (dx < 0) return dy < 0 ? 4u : (dy > 0 ? 6u : 2u);   /* UL,DL,LT */
+    if (dx > 0) return dy < 0 ? 5u : (dy > 0 ? 7u : 3u);   /* UR,DR,RT */
+    return dy < 0 ? 0u : 1u;                                /* UP,DN */
+}
+
+/* Show/hide the blinking aim cursor on the player's tile. (dx,dy) is the
+   currently-selected direction; visible drives the blink. */
+void view_aim_cursor(int8_t dx, int8_t dy, uint8_t visible) {
+    if (!visible) {
+        render_aim_hide();
+        return;
+    }
+    render_aim_cursor(aim_dir(dx, dy),
+                      (uint8_t)(g_px * 8u - SCX_REG),
+                      (uint8_t)(g_py * 8u - SCY_REG));
+}
+
 void view_sync_sprites(void) {
     uint8_t i, scx = SCX_REG, scy = SCY_REG;
 
