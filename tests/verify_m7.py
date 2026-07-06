@@ -160,8 +160,9 @@ def main() -> int:
     open_pack(gb)
     cursor_to(gb, idx_of(gb, 3, 6))
     gb.press("a", hold=8, settle=20)     # opens the action submenu
-    gb.press("a", hold=8, settle=30)     # confirm -> prompts for direction
-    gb.press_until("right", lambda rows: not pack_open(rows))
+    gb.press("a", hold=8, settle=30)     # confirm -> aim on the live world
+    gb.press("right", hold=6, settle=10) # turn the aim cursor right
+    gb.press("a", hold=8, settle=30)     # A confirms the aim -> fires
     gb.expect(read_pack(gb)[idx_of(gb, 3, 6)]["qty"] == q0 - 1,
               "wand charge not spent")
     gb.expect(known_bits(gb, 2) & (1 << 6), "wand not learned")

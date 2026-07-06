@@ -278,7 +278,7 @@ def main() -> int:
     # ---------------- 6. repeat-speed setting cycles in the menu
     menu_on = lambda rows: any("MENU" in r for r in rows)
     gb.press_until("start", menu_on)
-    want = 2 + 4                          # Repeat speed row (index 4)
+    want = 2 + 5                          # Repeat speed row (index 5, after Log)
     for _ in range(20):
         cur = gb.cursor_row()
         if cur == want:

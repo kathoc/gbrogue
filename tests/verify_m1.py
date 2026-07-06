@@ -25,7 +25,7 @@ def main() -> int:
 
     gb.boot_game()
     x, y = gb.player_pos()          # exactly one '@' on screen
-    gb.expect_on_screen("B1 HP12/12")
+    gb.expect_on_screen("B1 LV1 HP12/12")
     gb.expect_on_screen("Welcome to the tomb")
     gb.shot("m1_02_dungeon")
 

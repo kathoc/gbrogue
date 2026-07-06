@@ -6,7 +6,7 @@ full-map overview.
 from gbtest import GB, Failure
 from lang_map import STRINGS
 
-MENU_LANG_ROW = 2 + 5          # Language entry (index 5)
+MENU_LANG_ROW = 2 + 6          # Language entry (index 6, after Log was added)
 MENU_ON = lambda rows: any("MENU" in r for r in rows)
 MENU_ON_JA = lambda rows: any(STRINGS["MENU_TITLE"][1] in r for r in rows)
 
