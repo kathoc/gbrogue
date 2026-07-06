@@ -190,25 +190,16 @@ uint8_t inv_equip(uint8_t slot) {
 
 void inv_starting_kit(void) {
     item_t it;
-    uint8_t s;
 
     it.x = it.y = 0;
     it.flags = 0;
     it.ench = 0;
 
     it.kind = IK_FOOD;   it.sub = 0; it.qty = 1; inv_add(&it);
-    it.kind = IK_WEAPON; it.sub = 0; it.qty = 1; it.ench = 1;   /* mace +1 */
-    s = inv_add(&it);
-    g_wield = s;
-    g_pack[s].flags |= IF_WORN;
-    it.kind = IK_ARMOR;  it.sub = 1; it.qty = 1; it.ench = 1;   /* ring mail +1 */
-    s = inv_add(&it);
-    g_worn = s;
-    g_pack[s].flags |= IF_WORN;
-    it.kind = IK_WEAPON; it.sub = 2; it.qty = 1; it.ench = 0;   /* short bow */
-    inv_add(&it);
-    it.kind = IK_WEAPON; it.sub = 3; it.qty = 25;               /* arrows */
-    inv_add(&it);
+    /* Nothing else: the hero starts with a single ration only. Weapons,
+       armor and ammo (including a bow + arrows) must be found in the
+       dungeon; g_wield/g_worn stay SLOT_NONE (bare-handed) from
+       inv_clear(). */
 
     /* The debug ROM used to build a test kit + short hunger fuse here;
        both are now injected by verify_m7/m9 after boot (gbtest.py

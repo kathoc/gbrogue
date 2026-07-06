@@ -242,6 +242,11 @@ static void place_one_item(const room_t *rm) {
     else               it = item_place(IK_WAND, rng_range(N_WANDS), x, y);
     if (!it) return;
 
+    /* Arrows (weapon sub 3) drop as a usable bundle, not a lone shaft —
+       otherwise found ammo is qty 1 and useless. */
+    if (it->kind == IK_WEAPON && it->sub == 3u)
+        it->qty = (uint8_t)(6u + rng_range(10u));   /* 6..15 arrows */
+
     /* Enchant / curse weapons, armor, rings the way Rogue does. */
     if (it->kind == IK_WEAPON || it->kind == IK_ARMOR) {
         uint8_t roll = rng_byte();

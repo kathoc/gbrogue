@@ -97,11 +97,12 @@ def main() -> int:
     # --- starting kit
     kinds = [(i["kind"], i["sub"]) for i in pack]
     gb.expect((0, 0) in kinds, f"no food ration in kit: {pack}")
-    gb.expect((5, 0) in kinds, "no mace in kit")
-    gb.expect((6, 1) in kinds, "no ring mail in kit")
-    gb.expect(gb.rd("g_wield") != 0xFF, "no weapon wielded")
-    gb.expect(gb.rd("g_worn") != 0xFF, "no armor worn")
-    gb.expect(gb.rd("g_ac") == 6, f"AC should be 6 (ring mail 7 - ench 1), got {gb.rd('g_ac')}")
+    # starting kit is now FOOD ONLY: nothing else, and the hero is
+    # bare-handed / unarmored (weapons + armor must be found in the dungeon)
+    real = [(k, s) for (k, s) in kinds if k != 9]   # 9 == ITEM_NONE
+    gb.expect(real == [(0, 0)], f"kit should be food only, got {real}")
+    gb.expect(gb.rd("g_wield") == 0xFF, "should start bare-handed")
+    gb.expect(gb.rd("g_worn") == 0xFF, "should start unarmored")
     # (hp boosted above for walk survival; not part of the kit checks)
 
     # --- floor items generated
