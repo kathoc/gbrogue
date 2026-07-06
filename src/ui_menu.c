@@ -12,6 +12,7 @@
 #include "ui_log.h"
 #include "util.h"
 #include "sfx.h"
+#include "text4.h"
 
 /* Entry order (cursor index). ENTRY_* below must match. Single-line rows
    2.. fit well under the title. */
@@ -85,7 +86,11 @@ uint8_t ui_menu_show(void) {
                 cursor = (uint8_t)((cursor + 1u) % N_ENTRIES);
             draw_entry(old, cursor);
             draw_entry(cursor, cursor);
-            render_present();
+            /* if the two redrawn rows wrapped the composed-tile pool, the
+               untouched rows behind them now point at recycled tiles —
+               repaint the whole menu from a fresh pool before presenting */
+            if (g_t4_flushed) { g_t4_flushed = 0; draw_menu(cursor); }
+            else render_present();
         }
         if (keys & J_A) {
             sfx_play(SFX_MENU);

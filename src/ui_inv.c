@@ -128,7 +128,7 @@ static uint8_t action_hint_sid(const item_t *it) {
    picks, B backs to the list, SELECT closes the pack — the hint row says
    so. Row 0's label is the kind-specific verb; 1/2 are drop/cancel. */
 #define ROW_ACT0 14u
-static void draw_action(uint8_t cursor, uint8_t sel) {
+static void draw_action_rows(uint8_t cursor, uint8_t sel) {
     static const uint8_t OPT[3] = { 0u, SID_ACT_DROP, SID_ACT_CANCEL };
     uint8_t r;
     for (r = 0; r < 3u; r++) {
@@ -140,6 +140,19 @@ static void draw_action(uint8_t cursor, uint8_t sel) {
         render_row((uint8_t)(ROW_ACT0 + r), buf);
     }
     render_status(lang_str(SID_ACT_HINT));
+}
+
+static void draw_action(uint8_t cursor, uint8_t sel) {
+    draw_action_rows(cursor, sel);
+    if (g_t4_flushed) {
+        /* Composing the submenu wrapped the composed-tile pool: the list
+           rows behind it now point at recycled tiles. Rebuild the list
+           from a fresh pool (draw_list resets it), then re-lay the submenu
+           on top — before anything reaches VRAM. */
+        g_t4_flushed = 0;
+        draw_list(cursor);
+        draw_action_rows(cursor, sel);
+    }
     render_present();
 }
 
