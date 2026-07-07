@@ -258,6 +258,13 @@ static void mon_one_turn(monster_t *m) {
            wedged one diagonal away past a wall/door must come around to
            an orthogonal cell before it can hit — no more diagonal jabs
            through the corner of an L-corridor or across a doorway. */
+        /* Reveal grace: a monster the player has never actually seen on
+           screen (MST_SEEN clear) gets no free hit on the turn it first
+           appears next to you. It holds — no attack, no move — and
+           strikes normally from the next turn, once it's been drawn.
+           Monsters seen from afar are already MST_SEEN, so ordinary
+           combat is unchanged. */
+        if (!(m->state & MST_SEEN)) return;
         combat_monster_attack(m);
     } else {
         mon_step(m);

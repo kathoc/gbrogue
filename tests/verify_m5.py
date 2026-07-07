@@ -20,6 +20,8 @@ WALKABLE = {1, 2, 5, 6, 7, 8}
 MAX_MONSTERS = 12
 MON_STRIDE = 7  # kind,x,y,hp,state,eff,eff_t
 MON_NONE = 0xFF
+MST_AWAKE = 0x01  # the "spawned asleep" check reads only this bit; MST_SEEN
+                  # (0x02) is set the instant a monster is drawn on screen.
 
 
 def read_map(gb):
@@ -91,7 +93,7 @@ def main() -> int:
         gb.expect(m["kind"] < 26, f"bad kind {m}")
         gb.expect(grid[m["y"]][m["x"]] in WALKABLE, f"monster on wall {m}")
         gb.expect(m["hp"] >= 1, f"dead-on-arrival {m}")
-        gb.expect(m["state"] == 0, f"should spawn asleep {m}")
+        gb.expect((m["state"] & MST_AWAKE) == 0, f"should spawn asleep {m}")
     pos = {(m["x"], m["y"]) for m in mons}
     gb.expect(len(pos) == len(mons), "two monsters share a tile")
     px, py = gb.rd("g_px"), gb.rd("g_py")

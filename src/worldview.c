@@ -221,6 +221,10 @@ void view_sync_sprites(void) {
             render_sprite_hide((uint8_t)(SPR_MON0 + i));
             continue;
         }
+        /* The player is now actually looking at this monster: mark it
+           seen so the reveal grace (mon_one_turn) lets it strike from
+           here on. mon_shown() is const, so we set the flag here. */
+        g_mons[i].state |= MST_SEEN;
         render_sprite_glyph((uint8_t)(SPR_MON0 + i), mon_glyph(m, i));
         /* Sleepers hold dead still; only awake monsters rise and fall, so a
            breathing sprite now truthfully means "it will chase you". */

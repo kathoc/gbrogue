@@ -8,6 +8,10 @@
 
 /* Runtime monster state flags. */
 #define MST_AWAKE 0x01u
+/* The player has actually seen this monster drawn on screen at least
+   once. Cleared for freshly spawned monsters (reveal grace): a monster
+   the player has never seen may not strike on the turn it first appears. */
+#define MST_SEEN  0x02u
 
 /* Timed / magical conditions (eff). HELD, CONF and FLEE expire when
    eff_t hits 0; SLOW / HASTE / INVIS persist until cancelled. */
