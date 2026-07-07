@@ -41,9 +41,13 @@ extern uint8_t g_deepest;
    kept out of the ranking. Not saved/persisted. */
 extern uint8_t g_debug;
 
-/* RNG seed control. g_seed_override != 0 pins the seed for the next new
-   game (title seed entry / test harness); g_run_seed is the seed actually
-   used, for display and reproduction. Not reset by world_new. */
+/* RNG seed control. g_seed_pinned marks that g_seed_override holds a chosen
+   seed for the next new game (title seed entry / test harness) — a separate
+   flag so 0x00000000 is a valid pinned seed, not read as "unset". The test
+   harness pins by poking g_seed_override != 0 directly, so a nonzero value
+   also counts as pinned. g_run_seed is the seed actually used, for display
+   and reproduction. Not reset by world_new. */
+extern uint8_t  g_seed_pinned;
 extern uint32_t g_seed_override;
 extern uint32_t g_run_seed;
 

@@ -84,7 +84,7 @@ static void draw_seed(uint32_t v, uint8_t cur) {
 }
 
 static uint8_t edit_seed(void) {
-    uint32_t v = g_seed_override ? g_seed_override : g_run_seed;
+    uint32_t v = (g_seed_pinned || g_seed_override) ? g_seed_override : g_run_seed;
     uint8_t cur = 0;
     render_set_world(0);
     draw_seed(v, cur);
@@ -100,6 +100,7 @@ static uint8_t edit_seed(void) {
         }
         if (keys & J_A) {                             /* confirm + start */
             g_seed_override = v;
+            g_seed_pinned = 1u;      /* even 0x00000000 is now a real seed */
             render_fade_out(FADE_OUT_FRAMES);
             return 1;
         }
@@ -229,7 +230,7 @@ uint8_t ui_title_show(void) {
                 uint8_t cont = (uint8_t)(s_can && sel == 0u);
                 if (!cont) {
                     uint32_t s32;
-                    if (g_seed_override) s32 = g_seed_override;
+                    if (g_seed_pinned || g_seed_override) s32 = g_seed_override;
 #ifdef GBR_DEBUG_KIT
                     else s32 = GBR_TEST_SEED;    /* stable maps for the suite */
 #else
