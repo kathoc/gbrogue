@@ -281,8 +281,14 @@ static uint8_t read_scroll(uint8_t slot) {
     case 11: /* remove curse */
         {
             uint8_t i;
-            for (i = 0; i < PACK_SLOTS; i++)
+            for (i = 0; i < PACK_SLOTS; i++) {
+                /* lifting the curse doesn't just free the item — it flips
+                   the penalty into an equal bonus (-5 -> +5), so a strong
+                   piece dragged negative by a combine pays off once cleansed */
+                if ((g_pack[i].flags & IF_CURSED) && g_pack[i].ench < 0)
+                    g_pack[i].ench = (int8_t)(-g_pack[i].ench);
                 g_pack[i].flags &= (uint8_t)~IF_CURSED;
+            }
         }
         msgq_id(SID_S_PROTECT);
         break;
