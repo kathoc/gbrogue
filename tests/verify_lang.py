@@ -6,7 +6,7 @@ full-map overview.
 from gbtest import GB, Failure
 from lang_map import STRINGS
 
-MENU_LANG_ROW = 2 + 5          # Language entry (index 5, throw removed)
+MENU_LANG_ROW = 2 + 3          # Language entry (index 3: Log/Display/Speed/Lang/Quit)
 MENU_ON = lambda rows: any("MENU" in r for r in rows)
 MENU_ON_JA = lambda rows: any(STRINGS["MENU_TITLE"][1] in r for r in rows)
 
@@ -82,7 +82,6 @@ def main() -> int:
     gb.press("a", hold=8, settle=20)
     gb.expect(gb.rd("g_lang") == 1, "language flag did not flip")
     gb.expect(gb.wait_screen(MENU_ON_JA), "menu did not redraw in Japanese")
-    gb.expect_on_screen(STRINGS["MENU_REST"][1])      # やすむ
     gb.shot("lang_01_menu_ja")
     gb.press_until("b", lambda rows: not MENU_ON_JA(rows))
 

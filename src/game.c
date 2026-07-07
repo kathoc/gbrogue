@@ -342,7 +342,11 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
            (a no-move dash reads as a dead button). */
         if (in_monster_reach(nx, ny)) break;
         onto_item = item_floor_at(nx, ny);
-        was_beside = door_beside(g_px, g_py);
+        /* Standing ON a door counts as beside one, so the door we step off
+           of does not read as a fresh side-doorway and halt the run after a
+           single step. */
+        was_beside = (uint8_t)(door_beside(g_px, g_py) ||
+                               map_terrain(g_px, g_py) == TI_DOOR);
         snapshot_positions();
         if (!try_move(dx, dy)) break;
         steps++;
@@ -756,7 +760,7 @@ static uint8_t play(void) {
                     ui_popup(lang_str(SID_SAVED), lang_str(SID_SAFE_OFF), 0);
                     return END_SUSPENDED;
                 }
-                acted = (r == MENU_REST) ? 1u : 0u;
+                acted = 0u;              /* the menu never consumes a turn */
                 input_swallow_edges();
             }
             if (acted) finish_turn();

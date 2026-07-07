@@ -154,7 +154,7 @@ def main() -> int:
         gb.press("a", hold=8, settle=8)
 
     gb.press_until("start", menu_on)
-    gb.expect(gb.wait_screen(lambda rows: any("Rest a turn" in r for r in rows)
+    gb.expect(gb.wait_screen(lambda rows: any("Message log" in r for r in rows)
                              and any("Save & quit" in r for r in rows)),
               "menu entries never finished drawing")
     gb.shot("m9_01_menu")
@@ -194,7 +194,7 @@ def main() -> int:
                     n += 1
         return n
     gb.expect(gfx_cells() == 0, "ASCII mode should have no gfx tiles")
-    menu_pick(3)                          # Display mode (index 3, throw removed)
+    menu_pick(1)                          # Display mode (index 1: Log/Display/Speed/Lang/Quit)
     gb.expect(gb.wait_screen(lambda rows: gb.rd("g_render_mode") == 1),
               "render mode flag not set")
     gb.tick(60)                           # let the repaint land
@@ -202,15 +202,15 @@ def main() -> int:
     gb.expect(n > 30, f"GFX mode shows only {n} gfx cells")
     gb.shot("m9_03_gfx_mode")
     # toggle back
-    menu_pick(3)                          # Display mode (index 3, throw removed)
+    menu_pick(1)                          # Display mode (index 1: Log/Display/Speed/Lang/Quit)
     gb.expect(gb.wait_screen(lambda rows: gb.rd("g_render_mode") == 0),
               "render mode flag not cleared")
     gb.tick(60)
     gb.expect(gfx_cells() == 0, "ASCII mode not restored")
     print(f"  GFX toggle ok ({n} gfx cells)")
 
-    # --- suspend via menu (Save & quit, index 7 after Log)
-    menu_pick(6)
+    # --- suspend via menu (Save & quit, index 4: Log/Display/Speed/Lang/Quit)
+    menu_pick(4)
     gb.expect(gb.wait_screen(lambda rows: any("Game saved" in r for r in rows)),
               "save popup never appeared")
     gb.press_until("a", lambda rows: any("> CONTINUE" in r for r in rows))

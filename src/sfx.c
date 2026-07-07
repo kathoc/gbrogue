@@ -48,12 +48,11 @@ static const sfx_step_t FX_MISS[] = {
     { 0, 0, 0, 0, 0, 0 },
 };
 
-/* Wall bump: a click of noise, then a tight low thud — the sweep still
-   drops the pitch but the envelope kills it fast — "don". game.c adds
-   the screen jolt. */
+/* Wall bump: a short 12.5%-duty blip on pulse 1 with a fast downward
+   sweep — a clean Dragon-Quest-ish "boop" instead of harsh noise. The
+   envelope kills it quickly; game.c adds the screen jolt. */
 static const sfx_step_t FX_BUMP[] = {
-    { 2u, CH_NOISE, 0xC1u, 0x60u, 0, 0 },
-    { 5u, CH_SWEEP, 0xA1u, 0x80u, 0x58u, 0x03u },   /* ~110 Hz */
+    { 4u, CH_SWEEP, 0xA1u, 0x00u, 0x80u, 0x05u },   /* 12.5% duty, ~205 Hz swept down */
     { 0, 0, 0, 0, 0, 0 },
 };
 
@@ -99,11 +98,12 @@ static const sfx_step_t FX_MENU[] = {
     { 0, 0, 0, 0, 0, 0 },
 };
 
-/* Stairs: three heavy footfalls — "da, da, da". */
+/* Stairs: three heavy footfalls — "za, za, za". Spaced ~0.3 s apart (18
+   frames each, ~0.9 s total) so the descent paces the ~1 s fade-out. */
 static const sfx_step_t FX_STAIRS[] = {
-    { 7u, CH_NOISE, 0x81u, 0x62u, 0, 0 },
-    { 7u, CH_NOISE, 0x81u, 0x62u, 0, 0 },
-    { 8u, CH_NOISE, 0x91u, 0x62u, 0, 0 },
+    { 18u, CH_NOISE, 0x81u, 0x62u, 0, 0 },
+    { 18u, CH_NOISE, 0x81u, 0x62u, 0, 0 },
+    { 18u, CH_NOISE, 0x91u, 0x62u, 0, 0 },
     { 0, 0, 0, 0, 0, 0 },
 };
 
