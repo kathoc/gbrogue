@@ -61,8 +61,9 @@ static uint8_t item_sid(uint8_t i, uint8_t n) {
 }
 
 /* 8-hex-digit (32-bit) seed editor reached from the title. D-pad L/R moves
-   between the eight digits, U/D changes the current one, A confirms (pins
-   the seed for the next new game), B cancels. */
+   between the eight digits, U/D changes the current one, A pins the seed
+   and starts a new game immediately (returns 1), B cancels back to the
+   title (returns 0). Both paths leave the screen faded to black. */
 static void draw_seed(uint32_t v, uint8_t cur) {
     char buf[10];
     char cus[10];
@@ -82,7 +83,7 @@ static void draw_seed(uint32_t v, uint8_t cur) {
     render_present();
 }
 
-static void edit_seed(void) {
+static uint8_t edit_seed(void) {
     uint32_t v = g_seed_override ? g_seed_override : g_run_seed;
     uint8_t cur = 0;
     render_set_world(0);
@@ -93,8 +94,15 @@ static void edit_seed(void) {
         uint8_t keys;
         wait_vbl_done();
         keys = input_pressed();
-        if (keys & J_B) break;                       /* cancel */
-        if (keys & J_A) { g_seed_override = v; break; }  /* confirm + pin */
+        if (keys & J_B) {                             /* cancel */
+            render_fade_out(FADE_OUT_FRAMES);
+            return 0;
+        }
+        if (keys & J_A) {                             /* confirm + start */
+            g_seed_override = v;
+            render_fade_out(FADE_OUT_FRAMES);
+            return 1;
+        }
         if (keys & J_LEFT)  { cur = (uint8_t)((cur + 7u) & 7u); draw_seed(v, cur); }
         if (keys & J_RIGHT) { cur = (uint8_t)((cur + 1u) & 7u); draw_seed(v, cur); }
         if (keys & (J_UP | J_DOWN)) {
@@ -105,7 +113,6 @@ static void edit_seed(void) {
             draw_seed(v, cur);
         }
     }
-    render_fade_out(FADE_OUT_FRAMES);
 }
 
 static void draw_menu(uint8_t sel, uint8_t n) {
@@ -205,8 +212,15 @@ uint8_t ui_title_show(void) {
                 sfx_play(SFX_MENU);
                 render_fade_out(FADE_OUT_FRAMES);
                 render_art_end();          /* text tileset for the editor */
-                edit_seed();               /* fades itself in and out */
-                paint_title(sel, n_items);
+                if (edit_seed()) {         /* A: pinned seed, start now */
+                    g_run_seed = g_seed_override;
+                    rng_seed(g_seed_override);
+                    /* edit_seed() already faded to black and render_art_end()
+                       already ran above, matching the new-game start state
+                       below (lines ~230) -- no second fade here. */
+                    return 0;
+                }
+                paint_title(sel, n_items); /* B: cancelled, back to title */
                 render_fade_in(FADE_IN_FRAMES);
                 input_swallow_edges();
                 continue;
