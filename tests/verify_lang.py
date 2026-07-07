@@ -59,10 +59,17 @@ def main() -> int:
     chunks = sum(r.count("#") for r in rows)      # raw minimap tiles
     gb.expect(chunks >= 20, f"minimap barely drawn ({chunks} chunks)")
     gb.shot("lang_00_map")
+    # Flaky-SELECT fix: releasing SELECT must NOT close the overview — it
+    # stays up until B is pressed.
     gb.release("select")
+    gb.tick(30)
+    gb.expect(any("MAP" in r for r in gb.screen_rows()),
+              "map closed on SELECT release (should stay open until B)")
+    # B closes it and restores the world.
+    gb.press_until("b", lambda rows: any("@" in r for r in rows[:16]))
     gb.expect(gb.wait_screen(lambda rows: any("@" in r for r in rows[:16])),
-              "world not restored after map")
-    print(f"  SELECT hold shows the map ({chunks} chunks)")
+              "world not restored after closing map with B")
+    print(f"  SELECT hold shows the map ({chunks} chunks), B closes it")
     gb.press_until("select",
                    lambda rows: any("PACK" in r for r in rows))
     gb.press_until("b", lambda rows: not any("PACK" in r for r in rows))

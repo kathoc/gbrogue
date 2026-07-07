@@ -80,9 +80,13 @@ void ui_map_show(void) {
     }
     render_present();
 
-    while (input_held() & J_SELECT) {
+    /* Old Game Boys have flaky SELECT contacts, so the overview must not hang
+       on SELECT staying pressed. Once it is up it stays up — even if SELECT
+       drops out — until you deliberately close it with B. */
+    input_swallow_edges();      /* forget the SELECT hold that opened us */
+    for (;;) {
         wait_vbl_done();
-        input_tick();
+        if (input_pressed() & J_B) break;
         /* blink the player dot: recompose just its chunk in place */
         if ((++frames & 15u) == 0u && me_tile) {
             s_blink_off ^= 1u;
