@@ -24,10 +24,12 @@ uint8_t inv_add(const item_t *it) {
         for (i = 0; i < PACK_SLOTS; i++) {
             item_t *p = &g_pack[i];
             if (p->kind == it->kind && p->sub == it->sub &&
-                p->ench == it->ench &&
-                (stackable(it->kind) ||
-                 /* ammo stacks: arrows, darts, shuriken */
-                 it->sub == 3u || it->sub == 6u || it->sub == 7u)) {
+                /* Ammo (arrows/darts/shuriken) is a pure count — merge every
+                   pickup into the one stack regardless of enchant, which is
+                   meaningless for auto-firing ammo. Stackable consumables
+                   still need a matching enchant (always 0, so kind+sub). */
+                ((it->kind == IK_WEAPON && WS_THROWABLE(it->sub)) ||
+                 (stackable(it->kind) && p->ench == it->ench))) {
                 p->qty = (uint8_t)(p->qty + (it->qty ? it->qty : 1u));
                 return i;
             }

@@ -89,6 +89,9 @@ char *item_name(char *dst, const item_t *it) {
         break;
     case IK_WEAPON:
         p = fmt_str(p, lang_name(LT_WEAPON, it->sub));
+        /* Ammo is a pure stacking count: no enchant, no "?", no curse mark
+           (it is never wielded, so those states never apply). */
+        if (WS_THROWABLE(it->sub)) break;
         goto ench;
     case IK_ARMOR:
         p = fmt_str(p, lang_name(LT_ARMOR, it->sub));
