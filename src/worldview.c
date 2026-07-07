@@ -168,8 +168,9 @@ static uint8_t player_breath_period(void) {
     return g_haste_t ? 16u : 32u;              /* hasted: breathe fast */
 }
 
+/* Only ever asked of an awake monster — a sleeper holds still (see
+   view_sync_sprites), so the breathing bob reliably reads as "awake". */
 static uint8_t mon_breath_period(const monster_t *m) {
-    if (!(m->state & MST_AWAKE)) return 96u;   /* asleep: slow drowsing */
     if (m->eff & MEF_HASTE)      return 16u;   /* sped up: fast */
     if (m->eff & MEF_SLOW)       return 64u;   /* slowed down: sluggish */
     return 32u;
@@ -221,9 +222,13 @@ void view_sync_sprites(void) {
             continue;
         }
         render_sprite_glyph((uint8_t)(SPR_MON0 + i), mon_glyph(m, i));
+        /* Sleepers hold dead still; only awake monsters rise and fall, so a
+           breathing sprite now truthfully means "it will chase you". */
         render_sprite_pos((uint8_t)(SPR_MON0 + i), sx,
-                          (uint8_t)(sy + bob((uint8_t)(1u + i),
-                                             mon_breath_period(m))));
+                          (uint8_t)(sy + ((m->state & MST_AWAKE)
+                                          ? bob((uint8_t)(1u + i),
+                                                mon_breath_period(m))
+                                          : 0u)));
     }
 }
 

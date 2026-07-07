@@ -310,6 +310,20 @@ static uint8_t in_monster_reach(uint8_t x, uint8_t y) {
     return 0;
 }
 
+/* Any of the 8 neighbours a door? A dash should pull up next to a door set
+   into a wall it is running along, not only one dead ahead — running the
+   inside edge of a room used to skate straight past side doorways. */
+static uint8_t door_beside(uint8_t x, uint8_t y) {
+    int8_t ox, oy;
+    for (oy = -1; oy <= 1; oy++)
+        for (ox = -1; ox <= 1; ox++) {
+            if (!ox && !oy) continue;
+            if (map_terrain((uint8_t)(x + ox), (uint8_t)(y + oy)) == TI_DOOR)
+                return 1;
+        }
+    return 0;
+}
+
 /* B+dir: run until something interesting stops us. Returns turns. */
 static uint8_t fast_move(int8_t dx, int8_t dy) {
     uint8_t steps = 0, hp0 = g_hp;
@@ -320,13 +334,17 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
         uint8_t nx = (uint8_t)(g_px + dx);
         uint8_t ny = (uint8_t)(g_py + dy);
         uint8_t onto_item;
+        uint8_t was_beside;
         tile_id_t here;
-        /* Look before stepping: halt one cell short of a door (don't barge
-           through), one cell short of a monster's reach, and (via try_move
-           failing) one cell short of a wall. */
-        if (map_terrain(nx, ny) == TI_DOOR) break;
+        /* Look before stepping: halt one cell short of a monster's reach and
+           (via try_move failing) one cell short of a wall. Doors are judged
+           AFTER the step — halting one cell short of a door dead ahead, but
+           only once we have moved at least once, so a dash begun standing at
+           a door still takes its first step onto it instead of doing nothing
+           (a no-move dash reads as a dead button). */
         if (in_monster_reach(nx, ny)) break;
         onto_item = item_floor_at(nx, ny);
+        was_beside = door_beside(g_px, g_py);
         snapshot_positions();
         if (!try_move(dx, dy)) break;
         steps++;
@@ -338,6 +356,11 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
         if (!g_hp || g_won) break;
         if (onto_item) break;                        /* picked it up: stop on it */
         here = map_terrain(g_px, g_py);
+        if (here == TI_DOOR) break;                  /* stepped onto a door: stop on it */
+        /* Just came alongside a door we were not next to before — stop next
+           to it (side doorway in the wall we are running past). Skipped when
+           we were already beside one, so starting at a door never wedges. */
+        if (!was_beside && door_beside(g_px, g_py)) break;
         if (here == TI_STAIRS_DOWN || here == TI_STAIRS_UP) break;
         if (here == TI_TRAP && !(map_cell(g_px, g_py) & MF_HIDDEN)) break;
         if (g_hp < hp0 || g_sleep_t || g_held_t) break;
