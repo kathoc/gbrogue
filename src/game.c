@@ -153,7 +153,10 @@ static void finish_turn(void) {
     if (g_debug && !g_hp) g_hp = g_maxhp;   /* debug invincibility */
     view_worldpaint_around();
     animate_turn();
-    view_lunge_play();        /* attackers jab toward their victims */
+    /* attackers jab toward their victims; when several attacks land on
+       one turn, hold a beat between them so each reads separately. A
+       dash keeps its brisk tempo (no inter-jab pause). */
+    view_lunge_play(anim_skip ? 0u : ATTACK_BEAT_GAP);
     render_flash_play();      /* queued damage blinks, if any */
     render_msg_begin();       /* message slides in after the action */
     /* Rebuilding the status row composes ~40 banked text tiles — far

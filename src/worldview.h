@@ -46,7 +46,12 @@ uint8_t view_mon_shown_idx(uint8_t i);
 /* Attack feedback: queue a short sprite jab toward (dx,dy); combat
    adds them, finish_turn plays the queue after the move glide. */
 void view_lunge_add(uint8_t spr, int8_t dx, int8_t dy);
-void view_lunge_play(void);
+/* Play the queued jabs one attacker at a time. When two or more jabs
+   are queued (a multi-monster gang-up, or a player hit + counter),
+   pause beat_gap frames between them so each attack reads as its own
+   beat; pass 0 to run them back-to-back (dash: no extra waits). */
+#define ATTACK_BEAT_GAP 5u
+void view_lunge_play(uint8_t beat_gap);
 /* Enter world mode: full paint, snap scroll to target, sync sprites. */
 void view_world_enter(void);
 

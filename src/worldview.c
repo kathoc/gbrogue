@@ -256,10 +256,11 @@ void view_lunge_add(uint8_t spr, int8_t dx, int8_t dy) {
     lunge_n++;
 }
 
-void view_lunge_play(void) {
+void view_lunge_play(uint8_t beat_gap) {
     static const int8_t JAB[5] = { 2, 4, 4, 2, 0 };
     uint8_t i, f;
     uint8_t scx, scy;
+    uint8_t played = 0;   /* a jab has actually been drawn already */
 
     if (!lunge_n) return;
     if (!render_world_on()) {
@@ -280,6 +281,17 @@ void view_lunge_play(void) {
             wx = m->x;
             wy = m->y;
         }
+        /* Separate consecutive attacks so their boundary is legible:
+           hold a few frames between one jab and the next. Only between
+           real jabs — never before the first, nor after invisible
+           attackers that drew nothing. */
+        if (played && beat_gap) {
+            for (f = 0; f < beat_gap; f++) {
+                wait_vbl_done();
+                input_tick();
+                render_msg_tick();
+            }
+        }
         for (f = 0; f < 5u; f++) {
             uint8_t sx = (uint8_t)(wx * 8u - scx + lunge_dx[i] * JAB[f]);
             uint8_t sy = (uint8_t)(wy * 8u - scy + lunge_dy[i] * JAB[f]);
@@ -288,6 +300,7 @@ void view_lunge_play(void) {
             render_msg_tick();
             render_sprite_pos(spr, sx, sy);
         }
+        played = 1;
     }
     lunge_n = 0;
     view_sync_sprites();
