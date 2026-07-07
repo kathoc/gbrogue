@@ -11,6 +11,7 @@
 #include "art_data.h"
 #include "ui_rank.h"
 #include "sfx.h"
+#include "text4.h"
 
 /* Own translation unit: heavy render_text call sites must stay out of
    game.c (SDCC layout constraint, docs/architecture.md). */
@@ -64,30 +65,68 @@ static uint8_t item_sid(uint8_t i, uint8_t n) {
    between the eight digits, U/D changes the current one, A pins the seed
    and starts a new game immediately (returns 1), B cancels back to the
    title (returns 0). Both paths leave the screen faded to black. */
-static void draw_seed(uint32_t v, uint8_t cur) {
-    char buf[10];
-    char cus[10];
+/* The value under edit lives here rather than as a draw_seed_ex() argument:
+   SDCC's gbz80 calling convention marshals a uint32_t argument onto the
+   stack at every call site, which bank0 has no byte budget for. */
+static uint32_t s_seed_v;
+
+/* One shared 8-char-row builder for both the digit line and the cursor
+   line (is_cursor picks which): a single compute+render_text body, called
+   twice, compiles far smaller than inlining both loops in draw_seed_ex. */
+static void seed_row(uint8_t y, uint8_t is_cursor, uint8_t cur) {
+    char buf[9];
     uint8_t d;
-    render_clear_all();
-    render_text(MENU_COL, 6, lang_str(SID_TITLE_SEED));
     for (d = 0; d < 8u; d++) {
-        uint8_t nib = (uint8_t)((v >> ((7u - d) * 4u)) & 0xFu);
-        buf[d] = (char)(nib < 10u ? '0' + nib : 'A' + (nib - 10u));
-        cus[d] = (d == cur) ? '^' : ' ';
+        if (is_cursor) {
+            buf[d] = (d == cur) ? '^' : ' ';
+        } else {
+            uint8_t nib = (uint8_t)((s_seed_v >> ((7u - d) * 4u)) & 0xFu);
+            buf[d] = (char)(nib < 10u ? '0' + nib : 'A' + (nib - 10u));
+        }
     }
     buf[8] = 0;
-    cus[8] = 0;
-    render_text(MENU_COL, 8, buf);
-    render_text(MENU_COL, 9, cus);
-    render_status(lang_str(SID_MENU_HINT));
+    render_text(MENU_COL, y, buf);
+}
+
+/* reset=1: fresh screen (clears + recycles the composed-tile pool), used
+   for the very first paint over the title art. reset=0: D-pad repaint —
+   skip render_clear_all/t4_reset (which would blank+free every composed
+   tile behind a live, mid-recompose VRAM write) and rewrite only the one
+   row the keypress actually changed (curs_only picks row 9 over row 8),
+   the same "reset only when the screen is new" split ui_inv.c's
+   draw_list_ex uses for scroll updates -- halving the VRAM traffic of a
+   plain digit or cursor step also halves the odds of that step's redraw
+   still being mid-flight when the wrap guard below has to retry it. */
+static void draw_seed_ex(uint8_t cur, uint8_t reset, uint8_t curs_only) {
+again:
+    if (reset) {                                   /* layout is fixed, so
+                                                        both go up front and
+                                                        skip on a repaint */
+        render_clear_all();
+        render_text(MENU_COL, 6, lang_str(SID_TITLE_SEED));
+        render_status(lang_str(SID_MENU_HINT));
+    }
+    if (reset || !curs_only) seed_row(8, 0, cur);
+    if (reset || curs_only)  seed_row(9, 1, cur);
+    /* A repaint that wrapped the composed-tile pool leaves every untouched
+       cell pointing at recycled tiles -> repaint everything from a fresh
+       pool before this reaches VRAM (same guard as ui_inv.c/ui_menu.c).
+       Loop back in place (no recursive call) to skip re-marshalling cur
+       onto the stack -- SDCC's gbz80 calling convention makes that pricey
+       and bank0 has no headroom to spare. */
+    if (!reset && g_t4_flushed) {
+        g_t4_flushed = 0;
+        reset = 1;
+        goto again;
+    }
     render_present();
 }
 
 static uint8_t edit_seed(void) {
-    uint32_t v = (g_seed_pinned || g_seed_override) ? g_seed_override : g_run_seed;
     uint8_t cur = 0;
+    s_seed_v = (g_seed_pinned || g_seed_override) ? g_seed_override : g_run_seed;
     render_set_world(0);
-    draw_seed(v, cur);
+    draw_seed_ex(0, 1, 0);
     render_fade_in(FADE_IN_FRAMES);        /* caller faded out; reveal */
     input_swallow_edges();
     for (;;) {
@@ -99,19 +138,21 @@ static uint8_t edit_seed(void) {
             return 0;
         }
         if (keys & J_A) {                             /* confirm + start */
-            g_seed_override = v;
+            g_seed_override = s_seed_v;
             g_seed_pinned = 1u;      /* even 0x00000000 is now a real seed */
             render_fade_out(FADE_OUT_FRAMES);
             return 1;
         }
-        if (keys & J_LEFT)  { cur = (uint8_t)((cur + 7u) & 7u); draw_seed(v, cur); }
-        if (keys & J_RIGHT) { cur = (uint8_t)((cur + 1u) & 7u); draw_seed(v, cur); }
+        if (keys & (J_LEFT | J_RIGHT)) {
+            cur = (uint8_t)((cur + ((keys & J_LEFT) ? 7u : 1u)) & 7u);
+            draw_seed_ex(cur, 0, 1);
+        }
         if (keys & (J_UP | J_DOWN)) {
             uint8_t sh = (uint8_t)((7u - cur) * 4u);
-            uint8_t nib = (uint8_t)((v >> sh) & 0xFu);
+            uint8_t nib = (uint8_t)((s_seed_v >> sh) & 0xFu);
             nib = (uint8_t)(((keys & J_UP) ? nib + 1u : nib + 15u) & 0xFu);
-            v = (v & ~((uint32_t)0xFu << sh)) | ((uint32_t)nib << sh);
-            draw_seed(v, cur);
+            s_seed_v = (s_seed_v & ~((uint32_t)0xFu << sh)) | ((uint32_t)nib << sh);
+            draw_seed_ex(cur, 0, 0);
         }
     }
 }
