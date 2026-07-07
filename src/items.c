@@ -93,12 +93,11 @@ char *item_name(char *dst, const item_t *it) {
     case IK_ARMOR:
         p = fmt_str(p, lang_name(LT_ARMOR, it->sub));
 ench:
-        if (it->ench > 0) {
-            p = fmt_str(p, " +");
-            p = fmt_u16(p, (uint16_t)it->ench);
-        } else if (it->ench < 0) {
-            p = fmt_str(p, " -");
-            p = fmt_u16(p, (uint16_t)(-it->ench));
+        if ((it->flags & IF_WORN) && it->ench != 0) {
+            p = fmt_str(p, it->ench > 0 ? " +" : " -");
+            p = fmt_u16(p, (uint16_t)(it->ench > 0 ? it->ench : -it->ench));
+        } else if (!(it->flags & IF_WORN)) {
+            p = fmt_str(p, " ?");
         }
         if (it->flags & IF_KNOWN_CURSED) p = fmt_str(p, " c");
         break;

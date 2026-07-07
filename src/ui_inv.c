@@ -43,7 +43,7 @@ static void draw_line(uint8_t idx, uint8_t cursor) {
             p = fmt_str(p, " x");
             p = fmt_u16(p, it->qty);
         }
-        if (it->flags & IF_WORN) p = fmt_str(p, " *");
+        if (it->flags & IF_WORN) p = fmt_str(p, " (E)");
     }
     *p = 0;
     render_row((uint8_t)(LIST_TOP + idx - s_top), buf);
