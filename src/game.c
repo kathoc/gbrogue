@@ -318,18 +318,19 @@ static uint8_t corridor_exit(uint8_t x, uint8_t y, int8_t dx, int8_t dy,
     return n;
 }
 
-/* A door in the cell dead ahead or to either side as we run in (dx,dy) — but
-   NOT the one directly behind, which is the door we are running out of. A dash
-   begun on or beside a door leaves it cleanly, yet still pulls up at a fresh
-   doorway ahead or set into a wall it runs past. Ignoring only the cell behind
-   (rather than "were we beside any door before this step?") means a door left
-   behind never keeps us from halting at the NEXT door, however close the two
-   sit. Only orthogonal cells count: a door is entered straight-on from the
-   floor cell against it, so a diagonal check would halt one cell too early
-   (level with the doorframe corner, not the doorway itself). */
-static uint8_t door_ahead_or_side(uint8_t x, uint8_t y, int8_t dx, int8_t dy) {
-    return (uint8_t)(map_terrain((uint8_t)(x + dx), (uint8_t)(y + dy)) == TI_DOOR ||
-                     map_terrain((uint8_t)(x + dy), (uint8_t)(y + dx)) == TI_DOOR ||
+/* A door in either cell to the SIDE as we run in (dx,dy) — the perpendicular
+   pair, never the one dead ahead or the one directly behind. A door dead ahead
+   is deliberately left to the here==TI_DOOR check, which halts the dash ON the
+   doorway (we step onto it) instead of one cell short, so running straight into
+   a door now stops the player standing in it. The side check still pulls up
+   level with a doorway set into a wall we run past: a corridor's side door is
+   already caught as a corridor_exit branch, but a door in a ROOM wall (rooms
+   dash straight, with no exit test) is only stopped here. Ignoring the cell
+   behind is automatic — it lies on the travel axis, not the perpendicular pair.
+   Only orthogonal cells count: a diagonal check would halt one cell too early,
+   level with the doorframe corner rather than the doorway itself. */
+static uint8_t door_beside(uint8_t x, uint8_t y, int8_t dx, int8_t dy) {
+    return (uint8_t)(map_terrain((uint8_t)(x + dy), (uint8_t)(y + dx)) == TI_DOOR ||
                      map_terrain((uint8_t)(x - dy), (uint8_t)(y - dx)) == TI_DOOR);
 }
 
@@ -368,10 +369,11 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
            cell holds a monster, or if standing there would put us in a live
            (awake, already-seen) foe's strike range — keeping a square's
            spacing. Walls stop us via try_move failing. Doors are judged
-           AFTER the step — halting one cell short of a door dead ahead, but
-           only once we have moved at least once, so a dash begun standing at
-           a door still takes its first step onto it instead of doing nothing
-           (a no-move dash reads as a dead button). */
+           AFTER the step — halting ON a door we walk onto (dead ahead) or
+           level with a side doorway, but only once we have moved at least
+           once, so a dash begun standing at a door still takes its first step
+           onto it instead of doing nothing (a no-move dash reads as a dead
+           button). */
         if (mon_at(nx, ny)) break;
         if (mon_threatens(nx, ny)) break;
         onto_item = item_floor_at(nx, ny);
@@ -386,12 +388,13 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
         if (!g_hp || g_won) break;
         if (onto_item) break;                        /* picked it up: stop on it */
         here = map_terrain(g_px, g_py);
-        if (here == TI_DOOR) break;                  /* stepped onto a door: stop on it */
-        /* Pull up one cell short of a door ahead, or level with a side doorway
-           in a wall we are running past. The door directly behind — the one we
-           are running out of — is ignored, so a dash begun on or beside a door
-           leaves it yet still halts at the next door it reaches. */
-        if (door_ahead_or_side(g_px, g_py, dx, dy)) break;
+        if (here == TI_DOOR) break;                  /* stepped onto a door: stop ON it */
+        /* Pull up level with a side doorway set into a wall we run past. A door
+           dead ahead is NOT stopped here — we step onto it and halt via the
+           here==TI_DOOR check above, ending the dash standing in the doorway.
+           The door directly behind (the one we ran out of) lies on the travel
+           axis, not the perpendicular pair, so it never keeps us moving. */
+        if (door_beside(g_px, g_py, dx, dy)) break;
         if (here == TI_STAIRS_DOWN || here == TI_STAIRS_UP) break;
         if (here == TI_TRAP && !(map_cell(g_px, g_py) & MF_HIDDEN)) break;
         if (g_hp < hp0 || g_sleep_t || g_held_t) break;
