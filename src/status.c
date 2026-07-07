@@ -8,6 +8,23 @@
 
 uint8_t g_status_hint;
 
+/* Compare cache: the last status string actually painted. status_update()
+   rebuilds the row string every step (cheap fmt_u16), but the expensive
+   part is render_status -> t4_pair (per-tile banked font compositing). When
+   the freshly built string is byte-for-byte identical to what is already on
+   screen, we skip render_status entirely and no tile is recomposed. The row
+   is a single position-coupled string (a field's digit count shifts every
+   later tile), so caching the whole string — not per field — is the only
+   way to guarantee a pixel-identical result. s_hud_valid gates the very
+   first paint and post-teardown repaints (see status_invalidate). This is
+   display-only state, never saved. */
+static char    s_hud[48];
+static uint8_t s_hud_valid;
+
+void status_invalidate(void) {
+    s_hud_valid = 0;
+}
+
 /* Active-effect tags shown right of the gold count (order matches the
    SID_ST_* block). JA tags are single kanji, EN four letters. */
 static const uint8_t *const EFF_TIMERS[9] = {
@@ -97,5 +114,20 @@ void status_update(void) {
         p = fmt_str(p, hint);
     }
     *p = 0;
+    /* Skip the whole repaint when nothing visible changed. Compare the
+       built string (including its terminator) against the last painted
+       one; only recompose tiles when they differ or the cache is stale. */
+    if (s_hud_valid) {
+        uint8_t i = 0;
+        while (buf[i] == s_hud[i]) {
+            if (!buf[i]) return;          /* identical: no tile touched */
+            i++;
+        }
+    }
+    {
+        uint8_t i = 0;
+        do { s_hud[i] = buf[i]; } while (buf[i++]);
+    }
+    s_hud_valid = 1;
     render_status(buf);
 }

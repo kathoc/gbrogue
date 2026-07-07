@@ -137,7 +137,7 @@ static void magic_map(void) {
     for (y = 0; y < MAP_H; y++)
         for (x = 0; x < MAP_W; x++)
             if (map_terrain(x, y) != TI_BLANK)
-                map_set_flag(x, y, MF_EXPLORED);
+                map_set_explored(x, y);
     msgq_id(SID_S_MAP);
 }
 

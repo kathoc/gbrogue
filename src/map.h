@@ -9,12 +9,21 @@
 #define MAP_W 32
 #define MAP_H 28
 
-/* Cell byte: terrain in the low 5 bits, flags above. */
+/* Cell byte: terrain in the low 5 bits, flags above. The "explored" bit
+   no longer rides in g_map — it lives in the separate g_explored bitmap so
+   the static (terrain) map can be saved independently of exploration. */
 #define MF_TERRAIN  0x1Fu
-#define MF_EXPLORED 0x20u
 #define MF_HIDDEN   0x80u   /* trap / secret not yet discovered (M7) */
 
 extern uint8_t g_map[MAP_H][MAP_W];
+
+/* Explored bitmap: 1 bit per cell, packed x-wise. 28 rows x 4 bytes = 112B.
+   Kept out of g_map (DYNAMIC save region) so g_map stays a pure static
+   terrain snapshot. */
+#define EXPLORED_STRIDE ((MAP_W + 7) / 8)
+extern uint8_t g_explored[MAP_H][EXPLORED_STRIDE];
+uint8_t   map_is_explored(uint8_t x, uint8_t y);
+void      map_set_explored(uint8_t x, uint8_t y);
 
 void      map_clear(void);
 uint8_t   map_cell(uint8_t x, uint8_t y);

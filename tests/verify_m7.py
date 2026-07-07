@@ -79,8 +79,15 @@ def use_item(gb, kind, sub):
 
 
 def explored_count(gb):
-    raw = gb.rdbuf("g_map", MAP_W * MAP_H)
-    return sum(1 for c in raw if c & MF_EXPLORED)
+    # explored is a separate g_explored bitmap now (1 bit per cell)
+    stride = (MAP_W + 7) // 8
+    raw = gb.rdbuf("g_explored", MAP_H * stride)
+    n = 0
+    for y in range(MAP_H):
+        for x in range(MAP_W):
+            if (raw[y * stride + (x >> 3)] >> (x & 7)) & 1:
+                n += 1
+    return n
 
 
 def known_bits(gb, cls):

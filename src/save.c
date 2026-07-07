@@ -17,7 +17,17 @@
  */
 #define SRAM ((uint8_t *)0xA000)
 #define SAVE_MAGIC 0x47u          /* 'G' */
-#define SAVE_VER   4u          /* +play_frames +run_seed chunks */
+#define SAVE_VER   5u          /* static/dynamic split + g_explored */
+
+/* Fixed SRAM layout (see plan_save_bcd PART 1):
+ *   [0..5]     header: magic, ver, checksum_lo/hi, len_lo/hi
+ *   [6..901]   STATIC:  g_map (896B)              — offset 6, len 896
+ *   [902.. ]   DYNAMIC: g_save_rng(2) + chunks + g_explored(112B)
+ * The two regions are contiguous with no gap, so the whole-buffer checksum
+ * (SRAM[6..len)) equals g_static_sum + dyn_sum. */
+#define STATIC_OFF   6u
+#define STATIC_LEN   (MAP_H * MAP_W)          /* 896 */
+#define DYNAMIC_OFF  (STATIC_OFF + STATIC_LEN) /* 902 */
 
 /* identify.c state (exposed for tests + save) */
 extern uint8_t  g_id_alias[4][14];
@@ -25,23 +35,36 @@ extern uint16_t g_id_known[4];
 
 uint16_t g_save_rng;
 uint8_t  g_save_ok;
+uint8_t  g_save_static_dirty;    /* WRAM; set by save_mark_map_dirty() */
 
 static uint16_t cursor;
 static uint8_t  op_load;
+static uint16_t s_acc;           /* running byte sum during a write pass */
+static uint16_t g_static_sum;    /* cached checksum of the STATIC region */
 
-/* byte copy to/from SRAM (no memcpy — that would be a cross-bank call) */
+/* byte copy to/from SRAM (no memcpy — that would be a cross-bank call).
+   On write the copied bytes are folded into s_acc so the checksum comes for
+   free (incremental (B)); the read path leaves s_acc untouched. */
 static void chunk(void *p, uint16_t len) {
     uint8_t *pp = (uint8_t *)p;
     uint16_t i;
-    if (op_load)
+    if (op_load) {
         for (i = 0; i < len; i++) pp[i] = SRAM[cursor + i];
-    else
-        for (i = 0; i < len; i++) SRAM[cursor + i] = pp[i];
+    } else {
+        for (i = 0; i < len; i++) {
+            uint8_t b = pp[i];
+            SRAM[cursor + i] = b;
+            s_acc = (uint16_t)(s_acc + b);
+        }
+    }
     cursor = (uint16_t)(cursor + len);
 }
 
 typedef struct { void *p; uint16_t len; } chunk_row_t;
-static const chunk_row_t CHUNKS[] = {
+
+/* DYNAMIC region: everything that is NOT the static terrain map. g_save_rng
+   is written first (before this table) so it heads the DYNAMIC block. */
+static const chunk_row_t DYNAMIC_CHUNKS[] = {
     { &g_px, 1 }, { &g_py, 1 }, { &g_depth, 1 },
     { &g_hp, 1 }, { &g_maxhp, 1 },
     { &g_str, 1 }, { &g_maxstr, 1 },
@@ -53,7 +76,6 @@ static const chunk_row_t CHUNKS[] = {
     { &g_sleep_t, 1 }, { &g_levit_t, 1 }, { &g_seeinv_t, 1 },
     { &g_halluc_t, 1 }, { &g_mondet_t, 1 }, { &g_held_t, 1 },
     { &g_has_amulet, 1 },
-    { g_map, MAP_H * MAP_W },
     { g_rooms, sizeof(g_rooms) },
     { &g_room_count, 1 },
     { g_traps, sizeof(g_traps) },
@@ -70,17 +92,26 @@ static const chunk_row_t CHUNKS[] = {
     { &g_lang, 1 },
     { &g_play_frames, 4 },        /* carry the play timer across a suspend */
     { &g_run_seed, 4 },           /* keep the seed so it shows post-resume */
+    { g_explored, sizeof(g_explored) },   /* 112B, tail of the DYNAMIC block */
 };
-#define N_CHUNKS (sizeof(CHUNKS) / sizeof(CHUNKS[0]))
+#define N_DYNAMIC (sizeof(DYNAMIC_CHUNKS) / sizeof(DYNAMIC_CHUNKS[0]))
 
-/* rng state rides in g_save_rng (set by the BANK0 shim on save; read back
-   there to reseed on load) so this stays out of the rng module. */
-static void serialize(void) {
+/* STATIC region: the terrain map only. Same routine for read and write so
+   the layout can never drift between save and load. */
+static void serialize_static(void) {
+    cursor = STATIC_OFF;
+    chunk(g_map, STATIC_LEN);
+}
+
+/* DYNAMIC region. rng state rides in g_save_rng (set by the BANK0 shim on
+   save; read back there to reseed on load) so this stays out of the rng
+   module. Same routine for read and write. */
+static void serialize_dynamic(void) {
     uint8_t i;
-    cursor = 6;                    /* skip header */
+    cursor = DYNAMIC_OFF;
     chunk(&g_save_rng, 2);
-    for (i = 0; i < N_CHUNKS; i++)
-        chunk(CHUNKS[i].p, CHUNKS[i].len);
+    for (i = 0; i < N_DYNAMIC; i++)
+        chunk(DYNAMIC_CHUNKS[i].p, DYNAMIC_CHUNKS[i].len);
 }
 
 static uint16_t checksum(uint16_t len) {
@@ -102,24 +133,45 @@ void bank_save_exists(void) {
 }
 
 void bank_save_write(void) {
-    uint16_t sum;
+    uint16_t sum, dyn_sum, len;
     ENABLE_RAM;
     op_load = 0;
-    serialize();
+    /* STATIC: only re-flush the 896-byte terrain map when it actually
+       changed (dig / trap reveal / new floor). Otherwise the bytes and the
+       cached partial sum already in SRAM are reused. */
+    if (g_save_static_dirty) {
+        s_acc = 0;
+        serialize_static();
+        g_static_sum = s_acc;
+        g_save_static_dirty = 0;
+    }
+    /* DYNAMIC: always rewritten. cursor ends at the total length. */
+    s_acc = 0;
+    serialize_dynamic();
+    dyn_sum = s_acc;
+    len = cursor;
     SRAM[0] = SAVE_MAGIC;
     SRAM[1] = SAVE_VER;
-    SRAM[4] = (uint8_t)cursor;
-    SRAM[5] = (uint8_t)(cursor >> 8);
-    sum = checksum(cursor);
+    SRAM[4] = (uint8_t)len;
+    SRAM[5] = (uint8_t)(len >> 8);
+    sum = (uint16_t)(g_static_sum + dyn_sum);
     SRAM[2] = (uint8_t)sum;
     SRAM[3] = (uint8_t)(sum >> 8);
     DISABLE_RAM;
 }
 
 void bank_save_load(void) {
+    uint16_t i, s;
     ENABLE_RAM;
     op_load = 1;
-    serialize();               /* reads the saved rng into g_save_rng */
+    serialize_static();        /* g_map  <- SRAM[6..902) */
+    serialize_dynamic();       /* rng + dynamic + g_explored <- SRAM[902..) */
+    /* Rebuild the STATIC partial sum so the next incremental save can skip
+       re-flushing an unchanged map, and mark the map clean. */
+    s = 0;
+    for (i = STATIC_OFF; i < DYNAMIC_OFF; i++) s = (uint16_t)(s + SRAM[i]);
+    g_static_sum = s;
+    g_save_static_dirty = 0;
     DISABLE_RAM;
 }
 

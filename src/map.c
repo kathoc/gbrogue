@@ -1,14 +1,21 @@
 #include "map.h"
+#include "save.h"
 
 uint8_t g_map[MAP_H][MAP_W];
+uint8_t g_explored[MAP_H][EXPLORED_STRIDE];
 room_t  g_rooms[MAX_ROOMS];
 uint8_t g_room_count;
 
 void map_clear(void) {
     uint8_t x, y;
-    for (y = 0; y < MAP_H; y++)
+    for (y = 0; y < MAP_H; y++) {
         for (x = 0; x < MAP_W; x++) g_map[y][x] = TI_BLANK;
+        for (x = 0; x < EXPLORED_STRIDE; x++) g_explored[y][x] = 0;
+    }
     g_room_count = 0;
+    /* New floor: the static map is completely rewritten, so the next save
+       must flush it (also guarantees the very first save writes STATIC). */
+    save_mark_map_dirty();
 }
 
 uint8_t map_cell(uint8_t x, uint8_t y) {
@@ -20,19 +27,32 @@ tile_id_t map_terrain(uint8_t x, uint8_t y) {
     return (tile_id_t)(map_cell(x, y) & MF_TERRAIN);
 }
 
+uint8_t map_is_explored(uint8_t x, uint8_t y) {
+    if (x >= MAP_W || y >= MAP_H) return 0;
+    return (uint8_t)((g_explored[y][x >> 3] >> (x & 7u)) & 1u);
+}
+
+void map_set_explored(uint8_t x, uint8_t y) {
+    if (x >= MAP_W || y >= MAP_H) return;
+    g_explored[y][x >> 3] |= (uint8_t)(1u << (x & 7u));
+}
+
 void map_set_terrain(uint8_t x, uint8_t y, tile_id_t t) {
     if (x >= MAP_W || y >= MAP_H) return;
     g_map[y][x] = (uint8_t)((g_map[y][x] & ~MF_TERRAIN) | t);
+    save_mark_map_dirty();                 /* digging changes the static map */
 }
 
 void map_set_flag(uint8_t x, uint8_t y, uint8_t flag) {
     if (x >= MAP_W || y >= MAP_H) return;
     g_map[y][x] |= flag;
+    if (flag & MF_HIDDEN) save_mark_map_dirty();   /* trap revealed */
 }
 
 void map_clear_flag(uint8_t x, uint8_t y, uint8_t flag) {
     if (x >= MAP_W || y >= MAP_H) return;
     g_map[y][x] &= (uint8_t)~flag;
+    if (flag & MF_HIDDEN) save_mark_map_dirty();   /* trap revealed */
 }
 
 uint8_t map_walkable(uint8_t x, uint8_t y) {

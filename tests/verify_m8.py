@@ -17,6 +17,7 @@ def snapshot(gb):
         "food": gb.rd16("g_food"),
         "pack": gb.rdbuf("g_pack", PACK_SLOTS * STRIDE),
         "map": gb.rdbuf("g_map", 32 * 28),
+        "explored": gb.rdbuf("g_explored", 28 * 4),  # 112B EXPLORED bitmap
         "wield": gb.rd("g_wield"), "worn": gb.rd("g_worn"),
         "known": gb.rdbuf("g_id_known", 8),
     }
@@ -71,7 +72,9 @@ def main() -> int:
         gb.expect(pre[key] == post[key],
                   f"{key} mismatch after resume: {pre[key]} != {post[key]}")
     gb.expect(pre["pack"] == post["pack"], "pack mismatch after resume")
-    gb.expect(pre["map"] == post["map"], "map/explored mismatch after resume")
+    gb.expect(pre["map"] == post["map"], "map (terrain) mismatch after resume")
+    gb.expect(pre["explored"] == post["explored"],
+              "explored bitmap mismatch after resume")
     gb.expect(pre["known"] == post["known"], "identify state mismatch")
     print("  resume state matches suspend state")
 

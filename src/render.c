@@ -4,6 +4,7 @@
 #include "input.h"
 #include "text4.h"
 #include "farcopy.h"
+#include "status.h"
 
 /*
  * Shadow-buffer renderer.
@@ -311,6 +312,11 @@ void render_set_world(uint8_t on) {
     if (on) {
         uint8_t x;
         g_world_on = 1;
+        /* Re-entering the world reflushes every tile below; the status
+           row's composed tiles were recycled (t4_reset) while the overlay
+           owned the pool, so force the next status_update to repaint even
+           if no value changed since we left. */
+        status_invalidate();
         /* The message band uses its 20 fixed tiles; pin the map ids
            and re-stream the current line's pixels. */
         for (x = 0; x < MSGROW_TILES; x++)

@@ -19,6 +19,16 @@ void    save_invalidate(void);  /* death / victory wipes the save */
 extern uint16_t g_save_rng;     /* rng state in/out across the bank hop */
 extern uint8_t  g_save_ok;      /* bank_save_exists result */
 
+/* Static-map dirty flag (WRAM). Set whenever g_map changes (dig / trap
+   reveal / new floor); cleared after the STATIC region is (re)written.
+   1 = the next save must re-flush the 896-byte g_map block, else the save
+   reuses the cached STATIC bytes + checksum already in SRAM. */
+extern uint8_t  g_save_static_dirty;
+
+/* Mark the static map dirty. Pure WRAM flag set (bank_api.c, BANK0) — no
+   bank hop, callable from anywhere (map.c accessors). */
+void save_mark_map_dirty(void);
+
 /* BANK5 entry functions (run via call_bank; self-contained). */
 void bank_save_write(void);
 void bank_save_load(void);

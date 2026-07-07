@@ -59,3 +59,11 @@ uint8_t save_load(void) {
 void save_invalidate(void) {
     call_bank(5u, bank_save_invalidate);
 }
+
+/* Static-map dirty flag setter. g_save_static_dirty is a WRAM global, so
+   this is a plain store — no bank hop needed (unlike the bank_save_* calls
+   above, which run banked SRAM code). Kept in BANK0 so map.c can call it
+   directly from any bank. */
+void save_mark_map_dirty(void) {
+    g_save_static_dirty = 1u;
+}

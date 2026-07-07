@@ -90,12 +90,11 @@ def main() -> int:
     base = gb.addr("g_mons")
     for i in range(12):
         gb.pb.memory[base + i * 7] = 0xFF
-    gb.tick(20)
-    gb.hold("b")
-    gb.tick(4)
-    gb.press("a", hold=8, settle=8)
-    gb.release("b")
+    # Let the menu-close world repaint settle fully before the rest chord,
+    # else the A+B press lands mid-redraw and the mark-time turn is dropped.
     gb.tick(40)
+    gb.combo("a", "b", hold=12, settle=20)     # mark-time rest (A+B chord)
+    gb.tick(20)
     gb.expect(gb.wait_screen(
         lambda rows: STRINGS["YOU_WAIT"][1] in rows[16]),
         f"JA rest message missing: {gb.message_row()!r}")

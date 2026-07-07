@@ -310,29 +310,37 @@ static uint8_t in_monster_reach(uint8_t x, uint8_t y) {
     return 0;
 }
 
-/* Any of the 4 orthogonal neighbours a door? A dash should pull up right
-   beside a door set into a wall it is running along, not only one dead
-   ahead. Only orthogonal cells count: a door is entered straight-on from
-   the floor cell against it, so checking diagonals would halt one cell
-   too early (level with the doorframe corner, not the doorway itself). */
-static uint8_t door_beside(uint8_t x, uint8_t y) {
-    return (uint8_t)(map_terrain((uint8_t)(x + 1u), y) == TI_DOOR ||
-                     map_terrain((uint8_t)(x - 1u), y) == TI_DOOR ||
-                     map_terrain(x, (uint8_t)(y + 1u)) == TI_DOOR ||
-                     map_terrain(x, (uint8_t)(y - 1u)) == TI_DOOR);
+/* A door in the cell dead ahead or to either side as we run in (dx,dy) — but
+   NOT the one directly behind, which is the door we are running out of. A dash
+   begun on or beside a door leaves it cleanly, yet still pulls up at a fresh
+   doorway ahead or set into a wall it runs past. Ignoring only the cell behind
+   (rather than "were we beside any door before this step?") means a door left
+   behind never keeps us from halting at the NEXT door, however close the two
+   sit. Only orthogonal cells count: a door is entered straight-on from the
+   floor cell against it, so a diagonal check would halt one cell too early
+   (level with the doorframe corner, not the doorway itself). */
+static uint8_t door_ahead_or_side(uint8_t x, uint8_t y, int8_t dx, int8_t dy) {
+    return (uint8_t)(map_terrain((uint8_t)(x + dx), (uint8_t)(y + dy)) == TI_DOOR ||
+                     map_terrain((uint8_t)(x + dy), (uint8_t)(y + dx)) == TI_DOOR ||
+                     map_terrain((uint8_t)(x - dy), (uint8_t)(y - dx)) == TI_DOOR);
 }
 
 /* B+dir: run until something interesting stops us. Returns turns. */
 static uint8_t fast_move(int8_t dx, int8_t dy) {
     uint8_t steps = 0, hp0 = g_hp;
     uint8_t room0 = g_cur_room;
+    /* A door sits inside its room's rectangle, so a dash begun standing on one
+       starts "in" the room even when it is heading out into the corridor. The
+       threshold belongs to neither side until we commit, so the first step off
+       a door rebases room0 to whichever side we land on (see below) rather than
+       reading as entering/leaving a room and halting the run after one cell. */
+    uint8_t started_on_door = (uint8_t)(map_terrain(g_px, g_py) == TI_DOOR);
     anim_skip = 1;                    /* dash: no glide, just go */
     mons_dash(1);                     /* throttle the chase-map rebuild */
     while (steps < 40u) {
         uint8_t nx = (uint8_t)(g_px + dx);
         uint8_t ny = (uint8_t)(g_py + dy);
         uint8_t onto_item;
-        uint8_t was_beside;
         tile_id_t here;
         /* Look before stepping: halt one cell short of a monster's reach and
            (via try_move failing) one cell short of a wall. Doors are judged
@@ -342,11 +350,6 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
            (a no-move dash reads as a dead button). */
         if (in_monster_reach(nx, ny)) break;
         onto_item = item_floor_at(nx, ny);
-        /* Standing ON a door counts as beside one, so the door we step off
-           of does not read as a fresh side-doorway and halt the run after a
-           single step. */
-        was_beside = (uint8_t)(door_beside(g_px, g_py) ||
-                               map_terrain(g_px, g_py) == TI_DOOR);
         snapshot_positions();
         if (!try_move(dx, dy)) break;
         steps++;
@@ -359,15 +362,21 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
         if (onto_item) break;                        /* picked it up: stop on it */
         here = map_terrain(g_px, g_py);
         if (here == TI_DOOR) break;                  /* stepped onto a door: stop on it */
-        /* Just came alongside a door we were not next to before — stop next
-           to it (side doorway in the wall we are running past). Skipped when
-           we were already beside one, so starting at a door never wedges. */
-        if (!was_beside && door_beside(g_px, g_py)) break;
+        /* Pull up one cell short of a door ahead, or level with a side doorway
+           in a wall we are running past. The door directly behind — the one we
+           are running out of — is ignored, so a dash begun on or beside a door
+           leaves it yet still halts at the next door it reaches. */
+        if (door_ahead_or_side(g_px, g_py, dx, dy)) break;
         if (here == TI_STAIRS_DOWN || here == TI_STAIRS_UP) break;
         if (here == TI_TRAP && !(map_cell(g_px, g_py) & MF_HIDDEN)) break;
         if (g_hp < hp0 || g_sleep_t || g_held_t) break;
         if (in_monster_reach(g_px, g_py)) break;     /* one closed in on us */
-        if (g_cur_room != room0) break;              /* entered / left a room */
+        if (g_cur_room != room0) {                   /* entered / left a room */
+            /* First step off a door commits us to the side we landed on: run
+               on from there instead of halting on the threshold crossing. */
+            if (!started_on_door || steps != 1u) break;
+            room0 = g_cur_room;
+        }
         if (g_cur_room == 0xFFu && walk_neighbors(g_px, g_py) > 2u) break;
     }
     anim_skip = 0;

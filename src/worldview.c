@@ -20,7 +20,7 @@ static void mark_around_explored(void) {
     uint8_t x, y;
     for (y = (uint8_t)(g_py - 1u); y != (uint8_t)(g_py + 2u); y++)
         for (x = (uint8_t)(g_px - 1u); x != (uint8_t)(g_px + 2u); x++)
-            map_set_flag(x, y, MF_EXPLORED);
+            map_set_explored(x, y);
 }
 
 /* ------------------------------------------------------------- camera */
@@ -70,7 +70,7 @@ static tile_id_t cell_terrain_shown(uint8_t cell) {
 
 static void paint_cell(uint8_t x, uint8_t y) {
     uint8_t cell = map_cell(x, y);
-    if (cell & MF_EXPLORED) {
+    if (map_is_explored(x, y)) {
         const item_t *it = item_floor_at(x, y);
         if (it) {
             render_world_cell(x, y, (tile_id_t)item_tile(it->kind));
@@ -96,7 +96,7 @@ static void mark_room_explored(uint8_t idx) {
     r->flags |= ROOM_EXPLORED;
     for (y = r->y; y < (uint8_t)(r->y + r->h); y++)
         for (x = r->x; x < (uint8_t)(r->x + r->w); x++)
-            map_set_flag(x, y, MF_EXPLORED);
+            map_set_explored(x, y);
     if (render_world_on()) paint_rect(r->x, r->y, r->w, r->h);
 }
 
@@ -108,7 +108,7 @@ void view_worldpaint_full(void) {
         input_tick();               /* stay responsive during the paint */
         for (x = 0; x < MAP_W; x++) {
             uint8_t cell = g_map[y][x];
-            render_world_cell(x, y, (cell & MF_EXPLORED)
+            render_world_cell(x, y, map_is_explored(x, y)
                                         ? cell_terrain_shown(cell)
                                         : TI_BLANK);
         }
@@ -116,7 +116,7 @@ void view_worldpaint_full(void) {
     for (i = 0; i < MAX_FLOOR_ITEMS; i++) {
         const item_t *it = &g_floor[i];
         if (it->kind == ITEM_NONE) continue;
-        if (!(map_cell(it->x, it->y) & MF_EXPLORED)) continue;
+        if (!map_is_explored(it->x, it->y)) continue;
         render_world_cell(it->x, it->y, (tile_id_t)item_tile(it->kind));
     }
 }
@@ -310,7 +310,7 @@ void view_draw(void) {
         for (sx = 0; sx < SCREEN_W; sx++) {
             uint8_t wx = (uint8_t)(g_cam_x + sx);
             uint8_t cell = map_cell(wx, wy);
-            if (cell & MF_EXPLORED) {
+            if (map_is_explored(wx, wy)) {
                 render_tile(sx, sy, cell_terrain_shown(cell));
             } else {
                 render_tile(sx, sy, TI_BLANK);
@@ -323,7 +323,7 @@ void view_draw(void) {
         for (i = 0; i < MAX_FLOOR_ITEMS; i++) {
             const item_t *it = &g_floor[i];
             if (it->kind == ITEM_NONE) continue;
-            if (!(map_cell(it->x, it->y) & MF_EXPLORED)) continue;
+            if (!map_is_explored(it->x, it->y)) continue;
             if (it->x < g_cam_x || it->y < g_cam_y) continue;
             if ((uint8_t)(it->x - g_cam_x) >= SCREEN_W) continue;
             if ((uint8_t)(it->y - g_cam_y) >= VIEW_H) continue;

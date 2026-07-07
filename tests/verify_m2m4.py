@@ -19,7 +19,7 @@ DBG_ROM = ROOT / "build" / "dbg" / "gbrogue.gb"
 
 MAP_W, MAP_H = 32, 28
 MF_TERRAIN = 0x1F
-MF_EXPLORED = 0x20
+EXPLORED_STRIDE = (MAP_W + 7) // 8   # explored is now a separate g_explored bitmap
 
 # tile ids (src/tiles.h)
 TI_BLANK, TI_FLOOR, TI_CORRIDOR, TI_WALL_H, TI_WALL_V, TI_DOOR = range(6)
@@ -33,6 +33,19 @@ GLYPH = {TI_BLANK: " ", TI_FLOOR: ".", TI_CORRIDOR: "#", TI_WALL_H: "-",
 def read_map(gb: GB) -> list[list[int]]:
     raw = gb.rdbuf("g_map", MAP_W * MAP_H)
     return [list(raw[y * MAP_W:(y + 1) * MAP_W]) for y in range(MAP_H)]
+
+
+def read_explored(gb: GB):
+    """Return is_exp(x, y) reading the separate g_explored bitmap (112B)."""
+    raw = gb.rdbuf("g_explored", MAP_H * EXPLORED_STRIDE)
+    def is_exp(x, y):
+        return bool((raw[y * EXPLORED_STRIDE + (x >> 3)] >> (x & 7)) & 1)
+    return is_exp
+
+
+def explored_total(gb: GB) -> int:
+    is_exp = read_explored(gb)
+    return sum(1 for y in range(MAP_H) for x in range(MAP_W) if is_exp(x, y))
 
 
 def bfs_path(grid, start, goal):
@@ -91,7 +104,8 @@ def main() -> int:
     gb.expect(stairs[0] in reach, "stairs not reachable from spawn")
 
     # --- M3: initial exploration = spawn room lit, far cells dark
-    explored = sum(1 for row in grid for c in row if c & MF_EXPLORED)
+    is_exp = read_explored(gb)
+    explored = explored_total(gb)
     gb.expect(9 <= explored <= 250, f"initial explored count odd: {explored}")
 
     # screen matches ground truth at the player cell
@@ -105,7 +119,7 @@ def main() -> int:
         for vx in range(20):
             cell = grid[cam_y + vy][cam_x + vx]
             ch = rows[vy][vx]
-            if not (cell & MF_EXPLORED):
+            if not is_exp(cam_x + vx, cam_y + vy):
                 gb.expect(ch == " ",
                           f"unexplored ({cam_x+vx},{cam_y+vy}) shows {ch!r}")
             elif (vx, vy) != (sx, sy):
@@ -148,8 +162,7 @@ def main() -> int:
     gb.shot("m2m4_02_at_stairs")
 
     # --- M3: walking explored new ground
-    grid2 = read_map(gb)
-    explored2 = sum(1 for row in grid2 for c in row if c & MF_EXPLORED)
+    explored2 = explored_total(gb)
     gb.expect(explored2 > explored,
               f"exploration did not grow ({explored} -> {explored2})")
 

@@ -38,7 +38,7 @@ static void mark_room_explored_ram(uint8_t idx) {
     r->flags |= ROOM_EXPLORED;
     for (y = r->y; y < (uint8_t)(r->y + r->h); y++)
         for (x = r->x; x < (uint8_t)(r->x + r->w); x++)
-            map_set_flag(x, y, MF_EXPLORED);
+            map_set_explored(x, y);
 }
 
 void view_player_moved_ram(void) {
@@ -49,6 +49,6 @@ void view_player_moved_ram(void) {
         uint8_t x, y;
         for (y = (uint8_t)(g_py - 1u); y != (uint8_t)(g_py + 2u); y++)
             for (x = (uint8_t)(g_px - 1u); x != (uint8_t)(g_px + 2u); x++)
-                map_set_flag(x, y, MF_EXPLORED);
+                map_set_explored(x, y);
     }
 }

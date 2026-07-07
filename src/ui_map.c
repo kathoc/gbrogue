@@ -24,7 +24,7 @@ static uint8_t cell_shade(uint8_t x, uint8_t y) {
     uint8_t cell = map_cell(x, y);
     tile_id_t t = (tile_id_t)(cell & MF_TERRAIN);
     if (x == g_px && y == g_py && !s_blink_off) return 3;
-    if (!(cell & MF_EXPLORED)) return 0;
+    if (!map_is_explored(x, y)) return 0;
     switch (t) {
     case TI_BLANK:
         return 0;
