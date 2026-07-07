@@ -144,7 +144,7 @@ static uint8_t equip_swap(uint8_t *slotp, uint8_t slot,
         g_pack[*slotp].flags &= (uint8_t)~IF_WORN;
     }
     *slotp = slot;
-    p->flags |= IF_WORN;
+    p->flags |= IF_WORN | IF_IDENT;       /* equipping reveals the enchant for good */
     g_ac = inv_player_ac();               /* weapon leaves AC unchanged */
     msg_post_id(on_sid);
     return 1;
@@ -198,6 +198,7 @@ void inv_starting_kit(void) {
     it.x = it.y = 0;
     it.flags = 0;
     it.ench = 0;
+    it.sench = 0;
 
     it.kind = IK_FOOD;   it.sub = 0; it.qty = 1; inv_add(&it);
     /* Nothing else: the hero starts with a single ration only. Weapons,

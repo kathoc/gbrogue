@@ -15,7 +15,7 @@ MAP_W, MAP_H = 32, 28
 MF_TERRAIN, MF_EXPLORED, MF_HIDDEN = 0x1F, 0x20, 0x80
 TI_TRAP = 8
 PACK_SLOTS = 16
-STRIDE = 7
+STRIDE = 8   # item_t: kind,sub,x,y,qty,ench,sench,flags
 ITEM_NONE = 9
 IF_CURSED, IF_KNOWN_CURSED, IF_WORN = 1, 2, 4
 
@@ -24,7 +24,7 @@ def read_pack(gb):
     raw = gb.rdbuf("g_pack", PACK_SLOTS * STRIDE)
     out = {}
     for i in range(PACK_SLOTS):
-        k, sub, x, y, qty, ench, flags = raw[i * STRIDE:(i + 1) * STRIDE]
+        k, sub, x, y, qty, ench, sench, flags = raw[i * STRIDE:(i + 1) * STRIDE]
         if k != ITEM_NONE:
             out[i] = {"kind": k, "sub": sub, "qty": qty,
                       "ench": ench - 256 if ench > 127 else ench, "flags": flags}

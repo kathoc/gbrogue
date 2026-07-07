@@ -17,7 +17,7 @@ reached.
 import sys
 from gbtest import GB, Failure
 
-PACK_SLOTS, STRIDE = 16, 7
+PACK_SLOTS, STRIDE = 16, 8   # item_t: kind,sub,x,y,qty,ench,sench,flags
 MAP_W, MAP_H = 32, 28
 STAIRS_DN = 6
 

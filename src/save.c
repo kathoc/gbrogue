@@ -17,7 +17,7 @@
  */
 #define SRAM ((uint8_t *)0xA000)
 #define SAVE_MAGIC 0x47u          /* 'G' */
-#define SAVE_VER   6u          /* 32-bit rng state (g_save_rng widened) */
+#define SAVE_VER   7u          /* item_t gained sench; combine partial-ident */
 
 /* Fixed SRAM layout (see plan_save_bcd PART 1):
  *   [0..5]     header: magic, ver, checksum_lo/hi, len_lo/hi

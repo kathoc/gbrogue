@@ -91,7 +91,7 @@ def main() -> int:
     fbase = gb.addr("g_floor")
     # scan all MAX_FLOOR_ITEMS=24 floor slots for IK_AMULET (kind == 8);
     # the amulet can land in any free slot, not just the low ones
-    found_amulet = any(gb.pb.memory[fbase + i * MON_STRIDE] == 8
+    found_amulet = any(gb.pb.memory[fbase + i * 8] == 8   # item_t stride = 8
                        for i in range(24))
     if not found_amulet:
         raise Failure("Amulet of Yendor not placed on level 26")

@@ -32,6 +32,8 @@ enum {
 #define IF_CURSED       0x01u
 #define IF_KNOWN_CURSED 0x02u
 #define IF_WORN         0x04u   /* wielded / worn / on finger */
+#define IF_IDENT        0x08u   /* ever equipped: ench value is known for good */
+#define IF_PARTIAL      0x10u   /* partial-ident: sench is shown, true ench hidden */
 
 typedef struct {
     uint8_t kind;       /* IK_*, IK_COUNT = empty slot */
@@ -39,6 +41,7 @@ typedef struct {
     uint8_t x, y;       /* floor position (unused in pack) */
     uint8_t qty;        /* stack count, or gold amount low byte */
     int8_t  ench;       /* +/- enchantment (weapon/armor/ring) */
+    int8_t  sench;      /* known enchant shown while IF_PARTIAL */
     uint8_t flags;
 } item_t;
 

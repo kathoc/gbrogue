@@ -98,8 +98,8 @@ def main() -> int:
 
     # ---------------- 1. footsteps alternate "zu, za"
     def floor_item_at(x, y):
-        raw = gb.rdbuf("g_floor", 24 * 7)
-        return any(raw[i*7] != 9 and raw[i*7+2] == x and raw[i*7+3] == y
+        raw = gb.rdbuf("g_floor", 24 * 8)   # item_t stride = 8
+        return any(raw[i*8] != 9 and raw[i*8+2] == x and raw[i*8+3] == y
                    for i in range(24))
 
     def clean_step_dir():
@@ -148,7 +148,7 @@ def main() -> int:
         d = dirs(lambda t: t in WALK)
     tx, ty = pos()[0] + d[0][0], pos()[1] + d[0][1]
     floor0 = gb.addr("g_floor")
-    for off, v in enumerate((IK_GOLD, 0, tx, ty, 5, 0, 0)):
+    for off, v in enumerate((IK_GOLD, 0, tx, ty, 5, 0, 0, 0)):  # +sench
         mem[floor0 + off] = v
     g0 = gb.rd16("g_gold")
     reset_last()
@@ -172,7 +172,7 @@ def main() -> int:
     # ---------------- 4. item pickup blips
     d = dirs(lambda t: t == 1) or dirs(lambda t: t in WALK)
     tx, ty = pos()[0] + d[0][0], pos()[1] + d[0][1]
-    for off, v in enumerate((IK_POTION, 0, tx, ty, 1, 0, 0)):
+    for off, v in enumerate((IK_POTION, 0, tx, ty, 1, 0, 0, 0)):  # +sench
         mem[floor0 + off] = v
     reset_last()
     gb.expect(act(BTN[d[0]], lambda: pos() == (tx, ty)),

@@ -10,7 +10,7 @@ MAP_W, MAP_H = 32, 28
 MF_TERRAIN = 0x1F
 WALKABLE = {1, 2, 5, 6, 7, 8}
 MAX_FLOOR = 24
-FLOOR_STRIDE = 7   # kind,sub,x,y,qty,ench,flags
+FLOOR_STRIDE = 8   # kind,sub,x,y,qty,ench,sench,flags
 PACK_SLOTS = 16
 IK = {0: "food", 1: "potion", 2: "scroll", 3: "wand", 4: "ring",
       5: "weapon", 6: "armor", 7: "gold", 8: "amulet"}
@@ -27,7 +27,7 @@ def read_items(gb, sym, count):
     raw = gb.rdbuf(sym, count * FLOOR_STRIDE)
     out = []
     for i in range(count):
-        k, sub, x, y, qty, ench, flags = raw[i * FLOOR_STRIDE:(i + 1) * FLOOR_STRIDE]
+        k, sub, x, y, qty, ench, sench, flags = raw[i * FLOOR_STRIDE:(i + 1) * FLOOR_STRIDE]
         if k != ITEM_NONE:
             if ench > 127:
                 ench -= 256

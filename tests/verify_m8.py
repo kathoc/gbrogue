@@ -6,7 +6,7 @@ Uses PyBoy memory *writes* to force a quick death for the wipe check.
 """
 from gbtest import GB, Failure
 
-PACK_SLOTS, STRIDE = 16, 7
+PACK_SLOTS, STRIDE = 16, 8   # item_t: kind,sub,x,y,qty,ench,sench,flags
 
 
 def snapshot(gb):

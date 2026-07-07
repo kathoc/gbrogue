@@ -93,13 +93,22 @@ char *item_name(char *dst, const item_t *it) {
     case IK_ARMOR:
         p = fmt_str(p, lang_name(LT_ARMOR, it->sub));
 ench:
-        if ((it->flags & IF_WORN) && it->ench != 0) {
-            p = fmt_str(p, it->ench > 0 ? " +" : " -");
-            p = fmt_u16(p, (uint16_t)(it->ench > 0 ? it->ench : -it->ench));
-        } else if (!(it->flags & IF_WORN)) {
-            p = fmt_str(p, " ?");
+        {
+            int8_t v = 0;      /* signed value to show (identified or partial) */
+            uint8_t q = 0;     /* 1 => append "?" (partial-ident) */
+            if ((it->flags & (IF_WORN | IF_IDENT)) && it->ench != 0)
+                v = it->ench;                       /* identified: true value */
+            else if (it->flags & IF_PARTIAL)
+                { v = it->sench; q = 1; }           /* partial: known + "?" */
+            else if (!(it->flags & (IF_WORN | IF_IDENT)))
+                p = fmt_str(p, " ?");               /* unidentified */
+            if (v != 0 || q) {
+                p = fmt_str(p, v > 0 ? " +" : " -");
+                p = fmt_u16(p, (uint16_t)(v > 0 ? v : -v));
+                if (q) p = fmt_char(p, '?');
+            }
+            if (it->flags & IF_KNOWN_CURSED) p = fmt_str(p, " c");
         }
-        if (it->flags & IF_KNOWN_CURSED) p = fmt_str(p, " c");
         break;
     case IK_GOLD:
         if (g_lang) {

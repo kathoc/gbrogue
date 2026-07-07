@@ -13,7 +13,7 @@ MF_TERRAIN, MF_HIDDEN = 0x1F, 0x80
 WALK = {1, 2, 5, 6, 7, 8}
 TI_DOOR = 5
 GFX_BASE = 45
-PACK_SLOTS, STRIDE = 16, 7
+PACK_SLOTS, STRIDE = 16, 8   # item_t: kind,sub,x,y,qty,ench,sench,flags
 
 
 def read_grid(gb):
@@ -116,8 +116,8 @@ def main() -> int:
     gb.expect(rooms, "no room wide enough for a fast-move run")
     rx, ry, rw, rh, _ = max(rooms, key=lambda r: r[2])
     # avoid interior rows holding items or stairs (they stop the run)
-    fraw = gb.rdbuf("g_floor", 24 * 7)
-    item_rows = {fraw[i*7+3] for i in range(24) if fraw[i*7] != 9}
+    fraw = gb.rdbuf("g_floor", 24 * 8)
+    item_rows = {fraw[i*8+3] for i in range(24) if fraw[i*8] != 9}
     cand = [y for y in range(ry + 1, ry + rh - 1)
             if y not in item_rows]
     sy = cand[len(cand) // 2] if cand else ry + rh // 2

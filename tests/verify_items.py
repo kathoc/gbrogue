@@ -12,7 +12,7 @@ from gbtest import GB, Failure
 FOOD, POTION, SCROLL, WAND, RING, WEAPON, ARMOR = 0, 1, 2, 3, 4, 5, 6
 ITEM_NONE = 9          # IK_COUNT == empty slot
 IF_WORN = 0x04
-STRIDE = 7
+STRIDE = 8   # item_t: kind,sub,x,y,qty,ench,sench,flags
 CATS = [
     ("food",   FOOD,   2,  "consume"),
     ("potion", POTION, 14, "consume"),
@@ -46,7 +46,7 @@ def slot0(gb):
     base = gb.addr("g_pack")
     m = gb.pb.memory
     return {"kind": m[base+0], "sub": m[base+1], "qty": m[base+4],
-            "flags": m[base+6]}
+            "flags": m[base+7]}
 
 
 def pack_open(rows):

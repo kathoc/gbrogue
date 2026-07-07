@@ -306,7 +306,7 @@ class GB:
         """Write the M7/M9 test items into g_pack, filling the free slots
         right after the 5-item starting kit."""
         base = self.addr("g_pack")
-        stride, none = 7, 9
+        stride, none = 8, 9      # item_t: kind,sub,x,y,qty,ench,sench,flags
         slot = 0
         while slot < 16 and self.pb.memory[base + slot * stride] != none:
             slot += 1
@@ -318,7 +318,8 @@ class GB:
             self.pb.memory[a + 3] = 0        # y
             self.pb.memory[a + 4] = qty
             self.pb.memory[a + 5] = ench
-            self.pb.memory[a + 6] = flags
+            self.pb.memory[a + 6] = 0        # sench
+            self.pb.memory[a + 7] = flags
             slot += 1
         # short hunger fuse for the M7 hunger check (was set on-cart)
         fa = self.addr("g_food")

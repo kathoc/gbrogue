@@ -340,31 +340,42 @@ void bank_dup_query(void) {
     g_use_turns = (uint8_t)(find_dup(g_use_slot) != SLOT_NONE);
 }
 
-/* call_bank(2, ...) action: fuse g_use_slot's twin into it and equip the
-   survivor so its (now revealed) enchant shows. Effective value is the
-   enchant while worn, else -1 (a small, cursed nub); magnitudes add and
-   the sum is cursed if either piece was unworn. g_use_turns<-1 on merge,
-   0 if there was no twin (caller then falls back to the normal action). */
+/* call_bank(2, ...) action: fuse g_use_slot's twin into it. Effective value
+   is the enchant when the piece is identified (worn or ever-equipped), else
+   -1 (a small, cursed nub); magnitudes add and the sum is cursed if either
+   piece was unidentified. Identification propagates: if either input was
+   worn the result is worn (and thus identified); if both were identified the
+   result is identified; if only one was, the result is partially identified
+   (its known value survives in sench, the true value hides behind "?"); if
+   neither was, the result stays unidentified ("?"). Two unworn pieces fuse
+   without being equipped. g_use_turns<-1 on merge, 0 if there was no twin
+   (caller then falls back to the normal action). */
 void bank_combine(void) {
     uint8_t slot = g_use_slot;
     uint8_t other = find_dup(slot);
     item_t *a, *b;
     uint8_t *slotp;
-    int8_t ea, eb, res;
-    uint8_t mag, cursed;
+    int8_t ea, eb, res, known;
+    uint8_t mag, cursed, idA, idB, resultWorn, newflags;
 
     g_use_turns = 0;
     if (other == SLOT_NONE) return;
     a = &g_pack[slot];
     b = &g_pack[other];
 
-    ea = (a->flags & IF_WORN) ? a->ench : (int8_t)-1;
-    eb = (b->flags & IF_WORN) ? b->ench : (int8_t)-1;
+    idA = (uint8_t)((a->flags & (IF_WORN | IF_IDENT)) != 0);
+    idB = (uint8_t)((b->flags & (IF_WORN | IF_IDENT)) != 0);
+    ea = idA ? a->ench : (int8_t)-1;
+    eb = idB ? b->ench : (int8_t)-1;
     cursed = (uint8_t)(ea < 0 || eb < 0);
     if (ea < 0) ea = (int8_t)-ea;
     if (eb < 0) eb = (int8_t)-eb;
     mag = (uint8_t)((uint8_t)ea + (uint8_t)eb);
     res = cursed ? (int8_t)-(int8_t)mag : (int8_t)mag;
+
+    /* stash the known value before a->ench is overwritten (partial-ident) */
+    known = idA ? a->ench : b->ench;
+    resultWorn = (uint8_t)(((a->flags | b->flags) & IF_WORN) != 0);
 
     /* drop the donor slot; strip any equip ref to it */
     if (g_wield == other) g_wield = SLOT_NONE;
@@ -372,15 +383,23 @@ void bank_combine(void) {
     b->kind = ITEM_NONE;
     b->flags = 0;
 
-    /* survivor: merged enchant, curse per rule, freshly (re)equipped */
+    /* survivor: merged enchant, curse per rule, ident state per propagation */
     a->ench = res;
-    a->flags = (uint8_t)((a->flags & ~(IF_CURSED | IF_KNOWN_CURSED)) | IF_WORN);
-    if (cursed) a->flags |= IF_CURSED;
+    newflags = (uint8_t)(a->flags &
+        ~(IF_CURSED | IF_KNOWN_CURSED | IF_WORN | IF_IDENT | IF_PARTIAL));
+    if (cursed) newflags |= IF_CURSED;
+    if (resultWorn)      newflags |= IF_WORN | IF_IDENT;   /* worn => identified */
+    else if (idA && idB) newflags |= IF_IDENT;             /* both known */
+    else if (idA || idB) { newflags |= IF_PARTIAL; a->sench = known; }
+    a->flags = newflags;
 
-    slotp = (a->kind == IK_WEAPON) ? &g_wield : &g_worn;
-    if (*slotp != SLOT_NONE && *slotp != slot)
-        g_pack[*slotp].flags &= (uint8_t)~IF_WORN;
-    *slotp = slot;
+    /* only touch the equip pointers when the result stays worn */
+    if (resultWorn) {
+        slotp = (a->kind == IK_WEAPON) ? &g_wield : &g_worn;
+        if (*slotp != SLOT_NONE && *slotp != slot)
+            g_pack[*slotp].flags &= (uint8_t)~IF_WORN;
+        *slotp = slot;
+    }
 
     inv_compact();                 /* closes the donor gap; g_* follow */
     g_ac = inv_player_ac();
