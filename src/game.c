@@ -702,25 +702,26 @@ void game_run(void) {
             save_invalidate();
             ui_win_show();
         } else if (reason == END_DEAD) {
-            /* Death sequence. The tinnitus rings from the fatal blow and
-               keeps ringing until the game-over screen is dismissed. */
+            /* Death sequence. Let the fatal line read for a beat, then the
+               killing blow, the tinnitus and the world-goes-red crossfade
+               all begin on the same frame and run in parallel. When the fade
+               reaches black the tinnitus cuts out and the game-over screen
+               fades up in silence. */
             uint8_t f;
-            bgm_death_start();
-            /* let the fatal line (monster hit / trap / starvation) slide
-               in and read for a beat before the killing blow replays */
-            for (f = 0; f < 40u; f++) {
+            /* let the fatal line (monster hit / trap / starvation) slide in
+               and read for a beat before the three-way killing blow fires */
+            for (f = 0; f < 28u; f++) {
                 wait_vbl_done();
                 view_breathe();
                 render_msg_tick();
             }
-            render_flash_play(8u);      /* the killing blow, at 1/8 speed */
-            if (g_is_gbc)
-                render_death_to_red(120u);   /* 2s: world -> red -> black */
-            else
-                render_fade_out(FADE_OUT_FRAMES);  /* DMG: plain fade out */
+            bgm_death_start();          /* tinnitus + flash + crossfade start now */
+            /* GBC: 2s world -> red -> black, DMG: plain fade to black; the
+               1/4-speed killing-blow flash is overlaid on the opening ~1s */
+            render_death_to_red(g_is_gbc ? 120u : FADE_OUT_FRAMES);
             save_invalidate();          /* permadeath: no reload */
-            ui_dead_show();             /* fades the R.I.P. art up from black */
-            bgm_death_stop();           /* the ring stops on dismiss */
+            bgm_death_stop();           /* ring stops the instant the fade ends */
+            ui_dead_show();             /* silent R.I.P., fades up from black */
         }
         /* END_SUSPENDED: save already written; back to the title. */
     }

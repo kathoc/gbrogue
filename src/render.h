@@ -113,10 +113,13 @@ void render_art_end(void);
 #define FADE_IN_FRAMES  30u
 void render_fade_out(uint8_t frames);
 void render_fade_in(uint8_t frames);
-/* GBC death wipe: crossfade the whole screen from the live theme to pure
-   red over `frames`, then dim that red to black (a "the world goes red
-   and fades out" death). Ends at palette level 0, so the game-over art
-   can fade back in from black with no double fade. No-op on DMG. */
+/* Death wipe: GBC crossfades the whole screen from the live theme to pure
+   red over `frames`, then dims that red to black, with the pending killing-
+   blow flash (the drained g_flash queue) overlaid at the 1/4-speed cadence
+   over the opening ~56 frames — so the hit blink, the tinnitus and the fade
+   all run in parallel. DMG has no colour, so it just fades to black (no cell
+   flash). Ends at palette level 0, so the game-over art can fade back in
+   from black with no double fade. */
 void render_death_to_red(uint8_t frames);
 /* 1 while the palette is fully faded to black (level 0), else 0 — lets
    the game-over screen skip its own fade-out when the death sequence

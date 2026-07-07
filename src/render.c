@@ -188,6 +188,14 @@ static uint8_t msg_shift;      /* 8 = settled, <8 = slide in flight */
 static uint8_t msg_armed;      /* target composed, start deferred */
 static void msgrow_upload_mix(uint8_t shift);
 static void msgrow_commit(void);
+/* Defined further down (damage-flash section) but used by the death
+   sequence above them; forward-declared so the killing-blow flash can be
+   folded into render_death_to_red's per-frame loop. */
+static void flash_cell_attr(uint8_t x, uint8_t y, uint8_t attr);
+static void hp_field_attr(uint8_t attr);
+/* Paint the whole flash queue lit (`on`=1) or restored; shared by the
+   in-combat blink and the death sequence's killing-blow overlay. */
+static void flash_repaint(uint8_t on, uint8_t hurt);
 
 /* Copy tiles out of another ROM bank into VRAM, one tile at a time
    through the WRAM far-copy trampoline (see farcopy.c). */
@@ -311,26 +319,51 @@ static palette_color_t death_mix(palette_color_t c, uint16_t redness,
     return RGB(r, g, b);
 }
 
+/* The world-goes-red death wipe, with the killing-blow flash folded into
+   the same per-frame loop: the hit blink, the tinnitus (triggered by the
+   caller just before this returns to its first vblank) and the red
+   crossfade all advance in parallel. The flash runs at the 1/4-speed
+   killing-blow cadence (2 blink cycles) over the opening ~56 frames, then
+   the crossfade carries on to black alone. DMG has no colour crossfade and
+   no per-cell palette flash, so it just fades to black (tinnitus still
+   rings over it and stops with the game-over screen). */
 void render_death_to_red(uint8_t frames) {
-    uint8_t f;
-    if (!g_is_gbc || !frames) return;
+    uint8_t f, i, hurt = 0;
+    uint8_t on = 0, hold = 0, half = 4u;     /* blink state; 4 half-phases left */
+    if (!frames) return;
+    if (!g_is_gbc) { render_fade_out(frames); return; }  /* DMG: plain fade */
+    if (!g_world_on) g_flash_n = 0;
+    for (i = 0; i < g_flash_n; i++)
+        if (g_flashq[i].style == FLASH_HURT) hurt = 1;
     for (f = 0; f < frames; f++) {
-        palette_color_t bg[6 * 4];
-        palette_color_t ob[2 * 4];
-        uint16_t p = (uint16_t)(((uint16_t)(f + 1u) * 256u) / frames); /* 0..256 */
-        uint16_t redness = (uint16_t)(((uint32_t)p * 4u) / 3u);        /* full red by 75% */
-        uint16_t dim;
-        uint8_t i;
-        if (redness > 256u) redness = 256u;
-        /* the final quarter dims the pure red down to black */
-        dim = (p <= 192u) ? 256u : (uint16_t)(((256u - p) * 256u) / 64u);
-        for (i = 0; i < 6u * 4u; i++) bg[i] = death_mix(BG_PALS[i], redness, dim);
-        for (i = 0; i < 2u * 4u; i++) ob[i] = death_mix(OBJ_PALS[i], redness, dim);
-        wait_vbl_done();
-        input_tick();
-        render_msg_tick();          /* keep the fatal line sliding under the red */
-        set_bkg_palette(0, 6, bg);
-        set_sprite_palette(0, 2, ob);
+        /* --- killing-blow flash overlay: flip on each phase boundary --- */
+        if (g_flash_n && !hold) {
+            if (!half) g_flash_n = 0;        /* window done, cells restored */
+            else {
+                on ^= 1u; half--;
+                hold = on ? 16u : 12u;       /* 1/4 cadence: 4*4 on, 3*4 off */
+                flash_repaint(on, hurt);
+            }
+        }
+        if (hold) hold--;
+        /* --- one step of the red crossfade --- */
+        {
+            palette_color_t bg[6 * 4];
+            palette_color_t ob[2 * 4];
+            uint16_t p = (uint16_t)(((uint16_t)(f + 1u) * 256u) / frames); /* 0..256 */
+            uint16_t redness = (uint16_t)(((uint32_t)p * 4u) / 3u);        /* full red by 75% */
+            uint16_t dim;
+            if (redness > 256u) redness = 256u;
+            /* the final quarter dims the pure red down to black */
+            dim = (p <= 192u) ? 256u : (uint16_t)(((256u - p) * 256u) / 64u);
+            for (i = 0; i < 6u * 4u; i++) bg[i] = death_mix(BG_PALS[i], redness, dim);
+            for (i = 0; i < 2u * 4u; i++) ob[i] = death_mix(OBJ_PALS[i], redness, dim);
+            wait_vbl_done();
+            input_tick();
+            render_msg_tick();      /* keep the fatal line sliding under the red */
+            set_bkg_palette(0, 6, bg);
+            set_sprite_palette(0, 2, ob);
+        }
     }
     fade_k = 0;                     /* screen is black; keep the fader in sync */
 }
@@ -498,6 +531,21 @@ static void hp_field_attr(uint8_t attr) {
     VBK_REG = 0;
 }
 
+/* Paint every queued cell either lit (`on` -> damage palette 4+style /
+   inverted OBP1 sprite) or restored to its resting attribute. The HP
+   readout blinks red alongside a HURT flash. */
+static void flash_repaint(uint8_t on, uint8_t hurt) {
+    uint8_t i;
+    for (i = 0; i < g_flash_n; i++) {
+        flash_cell_attr(g_flashq[i].x, g_flashq[i].y,
+            on ? (uint8_t)(4u + g_flashq[i].style)
+               : attr_for_tile(g_world[g_flashq[i].y][g_flashq[i].x]));
+        if (!g_is_gbc && g_flashq[i].spr != 0xFFu)
+            set_sprite_prop(g_flashq[i].spr, on ? S_PALETTE : 0u);
+    }
+    if (hurt) hp_field_attr(on ? 4u : 0u);
+}
+
 void render_flash_play(uint8_t slow) {
     uint8_t c, i, f;
     uint8_t hurt = 0;
@@ -509,24 +557,12 @@ void render_flash_play(uint8_t slow) {
     for (i = 0; i < g_flash_n; i++)
         if (g_flashq[i].style == FLASH_HURT) hurt = 1;
     for (c = 0; c < 2u; c++) {
-        for (i = 0; i < g_flash_n; i++) {
-            flash_cell_attr(g_flashq[i].x, g_flashq[i].y,
-                            (uint8_t)(4u + g_flashq[i].style));
-            if (!g_is_gbc && g_flashq[i].spr != 0xFFu)
-                set_sprite_prop(g_flashq[i].spr, S_PALETTE);
-        }
-        if (hurt) hp_field_attr(4u);   /* the HP readout blinks red too */
+        flash_repaint(1u, hurt);
         for (f = 0; f < (uint8_t)(4u * slow); f++) {
             wait_vbl_done();
             input_tick();
         }
-        for (i = 0; i < g_flash_n; i++) {
-            flash_cell_attr(g_flashq[i].x, g_flashq[i].y,
-                            attr_for_tile(g_world[g_flashq[i].y][g_flashq[i].x]));
-            if (!g_is_gbc && g_flashq[i].spr != 0xFFu)
-                set_sprite_prop(g_flashq[i].spr, 0);
-        }
-        if (hurt) hp_field_attr(0u);
+        flash_repaint(0u, hurt);
         for (f = 0; f < (uint8_t)(3u * slow); f++) {
             wait_vbl_done();
             input_tick();
