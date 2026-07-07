@@ -164,6 +164,10 @@ static void finish_turn(void) {
        skip it; fast_move refreshes it once when the run ends. */
     if (!anim_skip) status_update();
     render_present();
+    /* Starving: a red danger pulse on every action, so the risk of
+       fainting mid-step is impossible to miss. Fires even for a
+       one-step dash (one action = one pulse). */
+    if (g_hunger == 3u) render_danger_flash();
     /* dash defers the autosave to its end (one save per run) */
     if (g_hp && !g_won && !anim_skip) save_write();
 }

@@ -490,6 +490,38 @@ void render_flash_play(void) {
     g_flash_n = 0;
 }
 
+/* A whole-screen red danger pulse, played once per turn while the
+   player is starving. GBC slams every BG palette to the damage-red
+   set for a few frames; DMG has no color, so it darkens the screen
+   instead. Either way the live palette is restored, so nothing stays
+   tinted. Kept short (~3F lit) so back-to-back moves still read. */
+void render_danger_flash(void) {
+    uint8_t f;
+    if (!g_world_on) return;
+    if (g_is_gbc) {
+        palette_color_t red[6 * 4];
+        uint8_t i;
+        for (i = 0; i < 6u * 4u; i++)
+            red[i] = BG_PALS[4u * 4u + (i & 3u)];  /* palette 4: red bg */
+        set_bkg_palette(0, 6, red);
+        for (f = 0; f < 3u; f++) {
+            wait_vbl_done();
+            input_tick();
+            render_msg_tick();
+        }
+        set_bkg_palette(0, 6, BG_PALS);            /* back to the theme */
+    } else {
+        uint8_t save = BGP_REG;
+        BGP_REG = 0xFFu;                           /* every shade darkest */
+        for (f = 0; f < 3u; f++) {
+            wait_vbl_done();
+            input_tick();
+            render_msg_tick();
+        }
+        BGP_REG = save;
+    }
+}
+
 void render_toggle_mode(void) {
     g_render_mode ^= 1u;
 }

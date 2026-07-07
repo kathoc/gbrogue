@@ -71,6 +71,9 @@ extern flash_ent_t g_flashq[FLASH_MAX];
 extern uint8_t     g_flash_n;
 void render_flash_add(uint8_t wx, uint8_t wy, uint8_t style, uint8_t spr);
 void render_flash_play(void);
+/* Whole-screen red pulse warning the player is starving (one per turn).
+   Restores the live palette before returning. */
+void render_danger_flash(void);
 /* Status-row tile columns of the HP readout (status.c keeps them
    current; the HURT blink turns them red on GBC). */
 extern uint8_t g_hp_col0, g_hp_col1;
