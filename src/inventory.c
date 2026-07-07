@@ -3,6 +3,7 @@
 #include "msg.h"
 #include "lang.h"
 #include "util.h"
+#include "identify.h"
 
 item_t  g_pack[PACK_SLOTS];
 uint8_t g_wield, g_worn, g_ring_l, g_ring_r;
@@ -179,6 +180,9 @@ uint8_t inv_equip(uint8_t slot) {
             return 0;
         }
         p->flags |= IF_WORN;
+        /* Putting a ring on reveals what kind it is (its curse, if any,
+           still only surfaces when you try to take it off). */
+        identify_learn(IDC_RING, p->sub);
         g_ac = inv_player_ac();
         msg_post_id(SID_RING_ON);
         return 1;
