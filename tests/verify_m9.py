@@ -194,7 +194,7 @@ def main() -> int:
                     n += 1
         return n
     gb.expect(gfx_cells() == 0, "ASCII mode should have no gfx tiles")
-    menu_pick(1)                          # Display mode (index 1: Log/Display/Speed/Lang/Quit)
+    menu_pick(1)                          # Display mode (index 1: Log/Display/Speed/Lang/Map/Quit)
     gb.expect(gb.wait_screen(lambda rows: gb.rd("g_render_mode") == 1),
               "render mode flag not set")
     gb.tick(60)                           # let the repaint land
@@ -202,15 +202,15 @@ def main() -> int:
     gb.expect(n > 30, f"GFX mode shows only {n} gfx cells")
     gb.shot("m9_03_gfx_mode")
     # toggle back
-    menu_pick(1)                          # Display mode (index 1: Log/Display/Speed/Lang/Quit)
+    menu_pick(1)                          # Display mode (index 1: Log/Display/Speed/Lang/Map/Quit)
     gb.expect(gb.wait_screen(lambda rows: gb.rd("g_render_mode") == 0),
               "render mode flag not cleared")
     gb.tick(60)
     gb.expect(gfx_cells() == 0, "ASCII mode not restored")
     print(f"  GFX toggle ok ({n} gfx cells)")
 
-    # --- suspend via menu (Save & quit, index 4: Log/Display/Speed/Lang/Quit)
-    menu_pick(4)
+    # --- suspend via menu (Save & quit, index 5: Log/Display/Speed/Lang/Map/Quit)
+    menu_pick(5)
     gb.expect(gb.wait_screen(lambda rows: any("Game saved" in r for r in rows)),
               "save popup never appeared")
     gb.press_until("a", lambda rows: any("> CONTINUE" in r for r in rows))

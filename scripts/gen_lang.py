@@ -331,6 +331,8 @@ S = [
                    f"{BTN_A}:けってい {BTN_B}:もどる {BTN_SE}:とじる"),
     # full-map overview: reminder that B closes it (SELECT release does not)
     ("MAP_CLOSE",  f"{BTN_B}:close", f"{BTN_B}:とじる"),
+    # START menu entry: opens the full-map overview (same as SELECT-hold)
+    ("MENU_MAP",   "Map",  "マップ"),
     # how-to-play manual: menu label, screen title/hint, then HELP0..N
     # (a POSITIONAL block — ui_help.c loops SID_HELP0 .. SID_HELP0+N-1)
 ]

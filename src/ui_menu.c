@@ -16,17 +16,18 @@
    2.. fit well under the title. */
 /* Throwing/firing moved to the inventory (select ammo -> A), so the menu
    no longer has a Throw entry. */
-#define N_ENTRIES 5
+#define N_ENTRIES 6
 
 static const uint8_t ENTRY_SID[N_ENTRIES] = {
     SID_MENU_LOG, SID_MENU_DISPLAY, SID_MENU_SPEED,
-    SID_MENU_LANG, SID_MENU_QUIT,
+    SID_MENU_LANG, SID_MENU_MAP, SID_MENU_QUIT,
 };
 #define ENTRY_LOG     0u
 #define ENTRY_DISPLAY 1u
 #define ENTRY_SPEED   2u
 #define ENTRY_LANG    3u
-#define ENTRY_QUIT    4u
+#define ENTRY_MAP     4u
+#define ENTRY_QUIT    5u
 
 static void draw_entry(uint8_t i, uint8_t cursor) {
     char buf[32];
@@ -115,6 +116,8 @@ uint8_t ui_menu_show(void) {
                 render_toggle_mode();
                 restore_world();
                 return MENU_CANCEL;
+            case ENTRY_MAP:                  /* full-map overview */
+                return MENU_MAP;
             default:                         /* ENTRY_QUIT */
                 restore_world();
                 return MENU_SUSPEND;

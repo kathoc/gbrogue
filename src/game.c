@@ -802,6 +802,7 @@ static uint8_t play(void) {
                     ui_popup(lang_str(SID_SAVED), lang_str(SID_SAFE_OFF), 0);
                     return END_SUSPENDED;
                 }
+                if (r == MENU_MAP) ui_map_show();
                 acted = 0u;              /* the menu never consumes a turn */
                 input_swallow_edges();
             }
