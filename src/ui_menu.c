@@ -99,7 +99,10 @@ uint8_t ui_menu_show(void) {
                 /* cycle 1 -> 2 -> 3 -> 1 (slow / normal / fast) */
                 g_repeat_speed = (uint8_t)((g_repeat_speed + 1u) % 3u);
                 draw_entry(ENTRY_SPEED, cursor);
-                render_present();
+                /* same wrap guard as the up/down branch: if composing the
+                   new label wrapped the pool, repaint from a fresh pool */
+                if (g_t4_flushed) { g_t4_flushed = 0; draw_menu(cursor); }
+                else render_present();
                 continue;
             }
             if (cursor == ENTRY_LANG) {

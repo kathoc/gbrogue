@@ -80,12 +80,22 @@ static void draw_desc(uint8_t idx, uint8_t n) {
     render_row(ROW_DESC2, hint ? lang_str(SID_D_TRYIT) : "");
 }
 
-static void draw_list(uint8_t cursor) {
+/* reset != 0 recycles the composed-text pool (fresh screen); reset == 0
+   blanks the cells but keeps the pool warm, so an in-modal scroll repaint
+   stays a cache-hit instead of re-composing all ~65 tiles (slow, and it
+   would overwrite VRAM slots the live map still references -> visible
+   garble for the frames the recompose spans). */
+static void draw_list_ex(uint8_t cursor, uint8_t reset) {
     char buf[32];
     char *p;
     uint8_t r, n = inv_count();
 
-    render_clear_all();
+    /* reset: fresh screen -> clear cells and recycle the pool. Otherwise
+       (in-modal scroll) leave both alone: every visible row is rewritten
+       below, so only the cells that actually change get marked dirty. That
+       keeps each present's VRAM map write small, so a scroll can't tear a
+       half-updated row on screen. */
+    if (reset) render_clear_all();
     p = fmt_str(buf, lang_str(SID_PACK_TITLE));
     p = fmt_u16(p, g_gold);
     *p = 0;
@@ -102,6 +112,10 @@ static void draw_list(uint8_t cursor) {
     draw_desc(cursor, n);
     render_status(lang_str(SID_PACK_HINT));
     render_present();
+}
+
+static void draw_list(uint8_t cursor) {
+    draw_list_ex(cursor, 1);
 }
 
 /* Row-17 hint for the action submenu: the primary verb depends on the
@@ -244,7 +258,10 @@ uint8_t ui_inv_show(void) {
                    window actually scrolled — a full render_clear_all on
                    every step made the list flash. */
                 if (scroll_to(cursor)) {
-                    draw_list(cursor);
+                    /* keep the pool warm: the new window is almost all
+                       already-composed rows, so this settles in a frame
+                       instead of a multi-frame full recompose */
+                    draw_list_ex(cursor, 0);
                 } else {
                     draw_line(old, cursor);
                     draw_line(cursor, cursor);
