@@ -2,6 +2,7 @@
 #include "ui_inv.h"
 #include "inventory.h"
 #include "items.h"
+#include "bankcall.h"
 #include "items_use.h"
 #include "items_zap.h"
 #include "identify.h"
@@ -118,16 +119,29 @@ static void draw_list(uint8_t cursor) {
     draw_list_ex(cursor, 1);
 }
 
+/* Ask BANK2 whether this slot has a mergeable twin (weapon/armor of the
+   same kind+sub). Kept out of HOME to stay under 0x8000. */
+static uint8_t has_dup(uint8_t slot) {
+    g_use_slot = slot;
+    call_bank(2u, bank_dup_query);
+    return g_use_turns;
+}
+
 /* Row-17 hint for the action submenu: the primary verb depends on the
    item kind (and whether it is currently equipped). */
-static uint8_t action_hint_sid(const item_t *it) {
+static uint8_t action_hint_sid(uint8_t slot) {
+    const item_t *it = &g_pack[slot];
     switch (it->kind) {
     case IK_WEAPON:
         if (it->sub == WS_ARROW)     return SID_ACT_FIRE;    /* はなつ */
         if (WS_THROWABLE(it->sub))   return SID_ACT_THROW;   /* なげる */
+        /* a second copy of the same melee weapon -> fuse them */
+        if (has_dup(slot))           return SID_A_COMBINE;
         return (it->flags & IF_WORN) ? SID_ACT_REMOVE : SID_ACT_WEAPON;
-    case IK_ARMOR:  return (it->flags & IF_WORN) ? SID_ACT_REMOVE
-                                                 : SID_ACT_ARMOR;
+    case IK_ARMOR:
+        if (has_dup(slot))           return SID_A_COMBINE;
+        return (it->flags & IF_WORN) ? SID_ACT_REMOVE
+                                     : SID_ACT_ARMOR;
     case IK_RING:   return (it->flags & IF_WORN) ? SID_ACT_REMOVE
                                                  : SID_ACT_RING;
     case IK_POTION: return SID_ACT_POTION;
@@ -153,7 +167,7 @@ static void draw_action_rows(uint8_t cursor, uint8_t sel) {
            verb / drop / cancel choices read as a submenu, not more items. */
         char *p = fmt_str(buf, r == sel ? "  > " : "    ");
         p = fmt_str(p, lang_str(r ? OPT[r]
-                                  : action_hint_sid(&g_pack[cursor])));
+                                  : action_hint_sid(cursor)));
         *p = 0;
         render_row((uint8_t)(ROW_ACT0 + r), buf);
     }
@@ -304,12 +318,24 @@ uint8_t ui_inv_show(void) {
                 uint8_t act = (keys & J_A) ? act_sel : 2u;
                 sfx_play(SFX_MENU);
                 if (act == 0u) {           /* primary action (use/equip/…) */
-                    g_zap_prompted = 0;
-                    turns = items_use(cursor);
-                    msgq_flush();  /* render deferred item-use messages */
-                    /* aiming a wand traded the pack for the live world —
-                       stay there even if the aim was cancelled */
-                    if (turns || g_zap_prompted) break;
+                    /* Try combine first: bank_combine merges + equips a
+                       twin and returns 1, or does nothing and returns 0
+                       when the item has no twin. On a merge we stay in the
+                       pack so the revealed enchant shows (fall to the
+                       M_LIST redraw tail); otherwise run the normal use. */
+                    g_use_slot = cursor;
+                    call_bank(2u, bank_combine);
+                    if (g_use_turns) {
+                        turns = g_use_turns;
+                        msgq_flush();
+                    } else {
+                        g_zap_prompted = 0;
+                        turns = items_use(cursor);
+                        msgq_flush();  /* render deferred item-use messages */
+                        /* aiming a wand traded the pack for the live world —
+                           stay there even if the aim was cancelled */
+                        if (turns || g_zap_prompted) break;
+                    }
                 } else if (act == 1u) {    /* drop (may refuse: worn/no room) */
                     turns = drop_item(cursor);
                     if (turns) break;

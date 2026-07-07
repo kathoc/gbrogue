@@ -248,8 +248,10 @@
 #define SID_ACT_HINT 243u
 #define SID_MAP_CLOSE 244u
 #define SID_MENU_MAP 245u
+#define SID_A_COMBINE 246u
+#define SID_COMBINED 247u
 
-#define SID_COUNT 246u
+#define SID_COUNT 248u
 #define LANG_KANA_COUNT 157u
 #define LANG_NAME_STRIDE 16u
 

@@ -15,5 +15,11 @@ uint8_t items_use(uint8_t slot);
 extern uint8_t g_use_slot, g_use_turns;
 void bank_consume_effect(void);   /* BANK2 entry — run via call_bank only */
 void bank_read_scroll(void);      /* BANK2 entry — run via call_bank only */
+/* Combine two identical weapons/armor (#3). Both BANK2 entries; marshal
+   the slot through g_use_slot, read the result from g_use_turns.
+   bank_dup_query reports twin-existence (1/0); bank_combine performs the
+   merge (g_use_turns 1 on success, 0 if there was no twin). */
+void bank_dup_query(void);        /* BANK2 entry — run via call_bank only */
+void bank_combine(void);          /* BANK2 entry — run via call_bank only */
 
 #endif

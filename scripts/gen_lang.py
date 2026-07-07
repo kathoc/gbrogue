@@ -333,6 +333,10 @@ S = [
     ("MAP_CLOSE",  f"{BTN_B}:close", f"{BTN_B}:とじる"),
     # START menu entry: opens the full-map overview (same as SELECT-hold)
     ("MENU_MAP",   "Map",  "マップ"),
+    # weapon/armor combine (#3): merge two of the same kind+sub into one
+    # and equip the result; the enchant sums (cursed if either is unworn).
+    ("A_COMBINE",  "combine",  "ごうせい"),
+    ("COMBINED",   "combined", "ごうせいした"),
     # how-to-play manual: menu label, screen title/hint, then HELP0..N
     # (a POSITIONAL block — ui_help.c loops SID_HELP0 .. SID_HELP0+N-1)
 ]
