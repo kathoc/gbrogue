@@ -311,8 +311,9 @@ S = [
     # pack action submenu: a 3-option vertical menu (primary verb / drop
     # / cancel) drawn where the item was described. Up/Down move, A picks,
     # B backs to the list, SELECT closes the pack. Verbs are bare words;
-    # the menu code adds the "> " cursor and one-column indent. ACT_HINT
-    # is the row-17 button hint.
+    # the menu code adds the "> " cursor and indents the block two columns
+    # past the item list so it reads as a submenu. ACT_HINT is the row-17
+    # button hint.
     ("ACT_WEAPON", "wield",  "そうび"),
     ("ACT_ARMOR",  "wear",   "そうび"),
     ("ACT_RING",   "put on", "はめる"),
@@ -328,6 +329,8 @@ S = [
     ("ACT_CANCEL", "cancel", "やめる"),
     ("ACT_HINT",   f"{BTN_A}:ok {BTN_B}:back {BTN_SE}:close",
                    f"{BTN_A}:けってい {BTN_B}:もどる {BTN_SE}:とじる"),
+    # full-map overview: reminder that B closes it (SELECT release does not)
+    ("MAP_CLOSE",  f"{BTN_B}:close", f"{BTN_B}:とじる"),
     # how-to-play manual: menu label, screen title/hint, then HELP0..N
     # (a POSITIONAL block — ui_help.c loops SID_HELP0 .. SID_HELP0+N-1)
 ]

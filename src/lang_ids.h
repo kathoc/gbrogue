@@ -246,8 +246,9 @@
 #define SID_ACT_DROP 241u
 #define SID_ACT_CANCEL 242u
 #define SID_ACT_HINT 243u
+#define SID_MAP_CLOSE 244u
 
-#define SID_COUNT 244u
+#define SID_COUNT 245u
 #define LANG_KANA_COUNT 156u
 #define LANG_NAME_STRIDE 16u
 

@@ -135,7 +135,9 @@ static void draw_action_rows(uint8_t cursor, uint8_t sel) {
     uint8_t r;
     for (r = 0; r < 3u; r++) {
         char buf[24];
-        char *p = fmt_str(buf, r == sel ? "> " : "  ");
+        /* Indent the action rows two columns past the item list so the
+           verb / drop / cancel choices read as a submenu, not more items. */
+        char *p = fmt_str(buf, r == sel ? "  > " : "    ");
         p = fmt_str(p, lang_str(r ? OPT[r]
                                   : action_hint_sid(&g_pack[cursor])));
         *p = 0;

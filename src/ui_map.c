@@ -67,6 +67,7 @@ void ui_map_show(void) {
     render_set_world(0);
     render_clear_all();
     render_text(9, 1, lang_str(SID_MAP_TITLE));
+    render_text(6, 16, lang_str(SID_MAP_CLOSE));   /* B closes the overview */
     for (ty = 0; ty < 7u; ty++) {
         for (tx = 0; tx < 8u; tx++) {
             uint8_t slot;
