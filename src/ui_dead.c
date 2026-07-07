@@ -75,7 +75,11 @@ void ui_dead_show(void) {
        still-visible world tore the screen. Hide it behind the fade, load
        the art, then wait_start() fades back in — the level_transition
        pattern (game.c). A slower ramp for the death screen (ゆっくり). */
-    render_fade_out(DEATH_FADE_FRAMES);
+    /* The death sequence (game.c) already faded the world to black — via
+       the red wipe on GBC or a plain fade on DMG — so skip a second fade
+       here to avoid a jarring re-brighten before the art loads. */
+    if (!render_faded_out())
+        render_fade_out(DEATH_FADE_FRAMES);
     render_set_world(0);
     render_clear_all();
     render_art_begin();

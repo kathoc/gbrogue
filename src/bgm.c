@@ -90,3 +90,28 @@ void bgm_stop(void) {
     on = 0;
     NR30_REG = 0x00u;                       /* wave DAC off */
 }
+
+/*
+ * Death tinnitus on CH2 (pulse). Chosen over a CH3 sine table because
+ * the hardware envelope gives a mathematically smooth, monotonic 0->max
+ * attack with no clicks — the plan's top priority ("刺さらない緩やかな
+ * 立ち上がりを最優先") — whereas rewriting wave RAM every frame to swell
+ * a sine's amplitude glitches (wave RAM writes during playback are
+ * unreliable and toggling NR30 re-triggers). At a high B the harmonics
+ * sit at/above the edge of hearing, so a 50%-duty pulse reads as a near-
+ * pure tone. B7 (x=2015: f=131072/(2048-2015)~=3972Hz) over B8 to keep
+ * clear of near-Nyquist aliasing in emulation while staying tinnitus-high.
+ * CH2 is free during death: SFX own CH1/CH4 and the melody (CH3) stopped.
+ */
+#define DEATH_B7_X 2015u          /* freq reg for a high B on a pulse ch */
+
+void bgm_death_start(void) {
+    NR21_REG = 0x80u;             /* duty 50% (near-sine at this pitch) */
+    NR22_REG = 0x0Fu;             /* init vol 0, envelope UP, period 7   */
+    NR23_REG = (uint8_t)(DEATH_B7_X & 0xFFu);
+    NR24_REG = (uint8_t)(0x80u | (DEATH_B7_X >> 8));  /* trigger, no len */
+}
+
+void bgm_death_stop(void) {
+    NR22_REG = 0x00u;             /* vol 0 + DAC off -> channel silent */
+}

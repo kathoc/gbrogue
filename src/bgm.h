@@ -17,6 +17,16 @@ void bgm_tick(void);
 void bgm_stop(void);
 void bgm_set_depth(uint8_t depth);
 
+/*
+ * Death "tinnitus": a sustained high B (B7 ~3951Hz) on the free pulse
+ * channel CH2, driven by the hardware 16-step rising envelope so its
+ * volume swells smoothly from 0 to full over ~1.6s (a soft attack, no
+ * click). Started at the fatal blow, stopped when the game-over screen
+ * is dismissed. No per-frame tick: once triggered the APU sustains it.
+ */
+void bgm_death_start(void);
+void bgm_death_stop(void);
+
 /* Test hooks. */
 extern volatile uint8_t  g_bgm_idx;
 extern volatile uint16_t g_bgm_len;

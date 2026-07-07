@@ -157,7 +157,10 @@ static void finish_turn(void) {
        one turn, hold a beat between them so each reads separately. A
        dash keeps its brisk tempo (no inter-jab pause). */
     view_lunge_play(anim_skip ? 0u : ATTACK_BEAT_GAP);
-    render_flash_play();      /* queued damage blinks, if any */
+    /* Normal turns blink the queued damage at full speed. On the FATAL
+       turn (HP just hit 0) hold the queue instead: the END_DEAD handler
+       replays that killing blow at 1/8 speed as the death sequence. */
+    if (g_hp) render_flash_play(1u);
     render_msg_begin();       /* message slides in after the action */
     /* Rebuilding the status row composes ~40 banked text tiles — far
        too costly to redo every dash step. During a dash (anim_skip)
@@ -699,16 +702,25 @@ void game_run(void) {
             save_invalidate();
             ui_win_show();
         } else if (reason == END_DEAD) {
-            /* let the fatal line (monster hit / trap / starvation)
-               slide in and sit on screen before the game-over art */
+            /* Death sequence. The tinnitus rings from the fatal blow and
+               keeps ringing until the game-over screen is dismissed. */
             uint8_t f;
-            for (f = 0; f < 100u; f++) {
+            bgm_death_start();
+            /* let the fatal line (monster hit / trap / starvation) slide
+               in and read for a beat before the killing blow replays */
+            for (f = 0; f < 40u; f++) {
                 wait_vbl_done();
                 view_breathe();
                 render_msg_tick();
             }
+            render_flash_play(8u);      /* the killing blow, at 1/8 speed */
+            if (g_is_gbc)
+                render_death_to_red(120u);   /* 2s: world -> red -> black */
+            else
+                render_fade_out(FADE_OUT_FRAMES);  /* DMG: plain fade out */
             save_invalidate();          /* permadeath: no reload */
-            ui_dead_show();
+            ui_dead_show();             /* fades the R.I.P. art up from black */
+            bgm_death_stop();           /* the ring stops on dismiss */
         }
         /* END_SUSPENDED: save already written; back to the title. */
     }

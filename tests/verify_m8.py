@@ -89,8 +89,9 @@ def main() -> int:
         if gb.rd("g_hp") == 0:
             break
     gb.expect(gb.rd("g_hp") == 0, "could not force death")
-    # the death screen fades in slowly now (deliberate), so give it room
-    gb.expect(gb.wait_screen(lambda rows: any("R.I.P." in r for r in rows), 360),
+    # the death sequence (1/8-speed killing blow + 2s red wipe + slow
+    # fade-in) delays R.I.P. by a few hundred frames, so give it room
+    gb.expect(gb.wait_screen(lambda rows: any("R.I.P." in r for r in rows), 720),
               "game-over screen never appeared")
     gb.shot("m8_03_dead")
     gb.press_until("start", lambda rows: any("NEW GAME" in r for r in rows))

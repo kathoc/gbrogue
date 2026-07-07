@@ -28,6 +28,8 @@ void render_aim_hide(void);
 
 /* 0 = ASCII tileset, 1 = graphic tileset (defined in render.c). */
 extern uint8_t g_render_mode;
+/* 1 on Game Boy Color, 0 on DMG (defined in render.c). */
+extern uint8_t g_is_gbc;
 
 void render_init(void);
 /* M10: flip between the ASCII tileset and the graphic tileset. The
@@ -70,7 +72,10 @@ typedef struct { uint8_t x, y, style, spr; } flash_ent_t;
 extern flash_ent_t g_flashq[FLASH_MAX];
 extern uint8_t     g_flash_n;
 void render_flash_add(uint8_t wx, uint8_t wy, uint8_t style, uint8_t spr);
-void render_flash_play(void);
+/* Drain the flash queue as a blocking blink. `slow` multiplies the per-
+   phase frame waits: 1 = the normal in-combat blink, 8 = the 1/8-speed
+   "killing blow" replay shown during the death sequence. */
+void render_flash_play(uint8_t slow);
 /* Whole-screen red pulse warning the player is starving (one per turn).
    Restores the live palette before returning. */
 void render_danger_flash(void);
@@ -108,6 +113,15 @@ void render_art_end(void);
 #define FADE_IN_FRAMES  30u
 void render_fade_out(uint8_t frames);
 void render_fade_in(uint8_t frames);
+/* GBC death wipe: crossfade the whole screen from the live theme to pure
+   red over `frames`, then dim that red to black (a "the world goes red
+   and fades out" death). Ends at palette level 0, so the game-over art
+   can fade back in from black with no double fade. No-op on DMG. */
+void render_death_to_red(uint8_t frames);
+/* 1 while the palette is fully faded to black (level 0), else 0 — lets
+   the game-over screen skip its own fade-out when the death sequence
+   already left the screen black. */
+uint8_t render_faded_out(void);
 void render_clear_view(void);
 void render_clear_all(void);
 void render_tile(uint8_t x, uint8_t y, tile_id_t id);

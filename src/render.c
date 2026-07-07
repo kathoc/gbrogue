@@ -291,6 +291,50 @@ static void fade_ramp(uint8_t frames, uint8_t up) {
 void render_fade_out(uint8_t frames) { fade_ramp(frames, 0); }
 void render_fade_in(uint8_t frames)  { fade_ramp(frames, 1); }
 
+uint8_t render_faded_out(void) { return (uint8_t)(fade_k == 0u); }
+
+/* One palette entry for the death wipe: bend it toward pure red (R->31,
+   G/B->0 as `redness` goes 0..256), then dim the whole colour toward
+   black (as `dim` goes 256..0). Two staged >>8 steps keep the maths in
+   uint16 range. */
+static palette_color_t death_mix(palette_color_t c, uint16_t redness,
+                                 uint16_t dim) {
+    uint8_t r = (uint8_t)(c & 0x1Fu);
+    uint8_t g = (uint8_t)((c >> 5) & 0x1Fu);
+    uint8_t b = (uint8_t)((c >> 10) & 0x1Fu);
+    r = (uint8_t)(r + (((uint16_t)(31u - r) * redness) >> 8));
+    g = (uint8_t)(((uint16_t)g * (256u - redness)) >> 8);
+    b = (uint8_t)(((uint16_t)b * (256u - redness)) >> 8);
+    r = (uint8_t)(((uint16_t)r * dim) >> 8);
+    g = (uint8_t)(((uint16_t)g * dim) >> 8);
+    b = (uint8_t)(((uint16_t)b * dim) >> 8);
+    return RGB(r, g, b);
+}
+
+void render_death_to_red(uint8_t frames) {
+    uint8_t f;
+    if (!g_is_gbc || !frames) return;
+    for (f = 0; f < frames; f++) {
+        palette_color_t bg[6 * 4];
+        palette_color_t ob[2 * 4];
+        uint16_t p = (uint16_t)(((uint16_t)(f + 1u) * 256u) / frames); /* 0..256 */
+        uint16_t redness = (uint16_t)(((uint32_t)p * 4u) / 3u);        /* full red by 75% */
+        uint16_t dim;
+        uint8_t i;
+        if (redness > 256u) redness = 256u;
+        /* the final quarter dims the pure red down to black */
+        dim = (p <= 192u) ? 256u : (uint16_t)(((256u - p) * 256u) / 64u);
+        for (i = 0; i < 6u * 4u; i++) bg[i] = death_mix(BG_PALS[i], redness, dim);
+        for (i = 0; i < 2u * 4u; i++) ob[i] = death_mix(OBJ_PALS[i], redness, dim);
+        wait_vbl_done();
+        input_tick();
+        render_msg_tick();          /* keep the fatal line sliding under the red */
+        set_bkg_palette(0, 6, bg);
+        set_sprite_palette(0, 2, ob);
+    }
+    fade_k = 0;                     /* screen is black; keep the fader in sync */
+}
+
 void render_art_begin(void) {
     g_attr_flat = 1;
 }
@@ -454,9 +498,10 @@ static void hp_field_attr(uint8_t attr) {
     VBK_REG = 0;
 }
 
-void render_flash_play(void) {
+void render_flash_play(uint8_t slow) {
     uint8_t c, i, f;
     uint8_t hurt = 0;
+    if (!slow) slow = 1u;
     if (!g_flash_n || !g_world_on) {
         g_flash_n = 0;
         return;
@@ -471,7 +516,7 @@ void render_flash_play(void) {
                 set_sprite_prop(g_flashq[i].spr, S_PALETTE);
         }
         if (hurt) hp_field_attr(4u);   /* the HP readout blinks red too */
-        for (f = 0; f < 4u; f++) {
+        for (f = 0; f < (uint8_t)(4u * slow); f++) {
             wait_vbl_done();
             input_tick();
         }
@@ -482,7 +527,7 @@ void render_flash_play(void) {
                 set_sprite_prop(g_flashq[i].spr, 0);
         }
         if (hurt) hp_field_attr(0u);
-        for (f = 0; f < 3u; f++) {
+        for (f = 0; f < (uint8_t)(3u * slow); f++) {
             wait_vbl_done();
             input_tick();
         }
