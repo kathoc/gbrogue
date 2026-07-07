@@ -310,18 +310,16 @@ static uint8_t in_monster_reach(uint8_t x, uint8_t y) {
     return 0;
 }
 
-/* Any of the 8 neighbours a door? A dash should pull up next to a door set
-   into a wall it is running along, not only one dead ahead — running the
-   inside edge of a room used to skate straight past side doorways. */
+/* Any of the 4 orthogonal neighbours a door? A dash should pull up right
+   beside a door set into a wall it is running along, not only one dead
+   ahead. Only orthogonal cells count: a door is entered straight-on from
+   the floor cell against it, so checking diagonals would halt one cell
+   too early (level with the doorframe corner, not the doorway itself). */
 static uint8_t door_beside(uint8_t x, uint8_t y) {
-    int8_t ox, oy;
-    for (oy = -1; oy <= 1; oy++)
-        for (ox = -1; ox <= 1; ox++) {
-            if (!ox && !oy) continue;
-            if (map_terrain((uint8_t)(x + ox), (uint8_t)(y + oy)) == TI_DOOR)
-                return 1;
-        }
-    return 0;
+    return (uint8_t)(map_terrain((uint8_t)(x + 1u), y) == TI_DOOR ||
+                     map_terrain((uint8_t)(x - 1u), y) == TI_DOOR ||
+                     map_terrain(x, (uint8_t)(y + 1u)) == TI_DOOR ||
+                     map_terrain(x, (uint8_t)(y - 1u)) == TI_DOOR);
 }
 
 /* B+dir: run until something interesting stops us. Returns turns. */
