@@ -292,29 +292,27 @@ static void dirs_to_vec(uint8_t dirs, int8_t *dx, int8_t *dy) {
     if (dirs & J_DOWN)  *dy = 1;
 }
 
-/* Count walkable neighbors — used to stop fast-move at junctions. */
-static uint8_t walk_neighbors(uint8_t x, uint8_t y) {
-    uint8_t n = 0;
-    if (map_walkable((uint8_t)(x + 1u), y)) n++;
-    if (map_walkable((uint8_t)(x - 1u), y)) n++;
-    if (map_walkable(x, (uint8_t)(y + 1u))) n++;
-    if (map_walkable(x, (uint8_t)(y - 1u))) n++;
-    return n;
-}
-
-/* Is (x,y) inside a visible monster's strike range? True for the 3x3 around
-   it (8-way melee), and for the monster's own cell — so a dash halts one
-   step short of a fight instead of charging in. */
-static uint8_t in_monster_reach(uint8_t x, uint8_t y) {
-    uint8_t i;
-    for (i = 0; i < MAX_MONSTERS; i++) {
-        const monster_t *m = &g_mons[i];
-        if (m->kind == MON_NONE) continue;
-        if (!view_visible(m->x, m->y)) continue;
-        if ((uint8_t)(m->x - x + 1u) <= 2u && (uint8_t)(m->y - y + 1u) <= 2u)
-            return 1;
+/* Corridor-follow: count the orthogonal walkable exits from (x,y), ignoring
+   the cell directly behind us (x-dx, y-dy) — the one we just came from. With
+   exactly one exit we hand it back in (*ox,*oy) so the dash turns to follow
+   it (straight run OR an L-bend/crank). Zero exits (dead end) or two-plus
+   (a T/junction) return other counts and end the run. Only orthogonal
+   neighbors count, so a straight corridor (one exit ahead) runs on while any
+   real branch halts — the old walk_neighbors junction test, but able to turn. */
+static uint8_t corridor_exit(uint8_t x, uint8_t y, int8_t dx, int8_t dy,
+                             int8_t *ox, int8_t *oy) {
+    static const int8_t ODX[4] = { 1, -1, 0, 0 };
+    static const int8_t ODY[4] = { 0, 0, 1, -1 };
+    int8_t bx = (int8_t)-dx, by = (int8_t)-dy;   /* the cell behind us */
+    uint8_t n = 0, i;
+    for (i = 0; i < 4u; i++) {
+        if (ODX[i] == bx && ODY[i] == by) continue;
+        if (!map_walkable((uint8_t)(x + ODX[i]), (uint8_t)(y + ODY[i]))) continue;
+        n++;
+        *ox = ODX[i];
+        *oy = ODY[i];
     }
-    return 0;
+    return n;
 }
 
 /* A door in the cell dead ahead or to either side as we run in (dx,dy) — but
@@ -345,17 +343,34 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
     anim_skip = 1;                    /* dash: no glide, just go */
     mons_dash(1);                     /* throttle the chase-map rebuild */
     while (steps < 40u) {
-        uint8_t nx = (uint8_t)(g_px + dx);
-        uint8_t ny = (uint8_t)(g_py + dy);
+        uint8_t nx, ny;
         uint8_t onto_item;
         tile_id_t here;
-        /* Look before stepping: halt one cell short of a monster's reach and
-           (via try_move failing) one cell short of a wall. Doors are judged
+        int8_t ndx = dx, ndy = dy;
+        /* Corridor-follow: only while in a corridor (never a room), and only
+           after the first (pushed) step, retarget onto the single continuing
+           exit so the dash rounds an L-bend or crank instead of stalling at
+           the wall. A dead end or a junction (0 or >=2 exits, ignoring the
+           cell behind us) ends the run. Rooms stay a straight run — dx,dy
+           fixed, stopped by a wall (try_move fails), door, or monster. */
+        if (g_cur_room == 0xFFu && steps > 0u) {
+            if (corridor_exit(g_px, g_py, dx, dy, &ndx, &ndy) != 1u) break;
+            dx = ndx;
+            dy = ndy;
+        }
+        nx = (uint8_t)(g_px + dx);
+        ny = (uint8_t)(g_py + dy);
+        /* Look before stepping. A monster in the next cell would be auto-
+           attacked by try_move, so never step onto one: halt in place if the
+           cell holds a monster, or if standing there would put us in a live
+           (awake, already-seen) foe's strike range — keeping a square's
+           spacing. Walls stop us via try_move failing. Doors are judged
            AFTER the step — halting one cell short of a door dead ahead, but
            only once we have moved at least once, so a dash begun standing at
            a door still takes its first step onto it instead of doing nothing
            (a no-move dash reads as a dead button). */
-        if (in_monster_reach(nx, ny)) break;
+        if (mon_at(nx, ny)) break;
+        if (mon_threatens(nx, ny)) break;
         onto_item = item_floor_at(nx, ny);
         snapshot_positions();
         if (!try_move(dx, dy)) break;
@@ -377,14 +392,13 @@ static uint8_t fast_move(int8_t dx, int8_t dy) {
         if (here == TI_STAIRS_DOWN || here == TI_STAIRS_UP) break;
         if (here == TI_TRAP && !(map_cell(g_px, g_py) & MF_HIDDEN)) break;
         if (g_hp < hp0 || g_sleep_t || g_held_t) break;
-        if (in_monster_reach(g_px, g_py)) break;     /* one closed in on us */
+        if (mon_adjacent_any(g_px, g_py)) break;     /* pulled up next to one */
         if (g_cur_room != room0) {                   /* entered / left a room */
             /* First step off a door commits us to the side we landed on: run
                on from there instead of halting on the threshold crossing. */
             if (!started_on_door || steps != 1u) break;
             room0 = g_cur_room;
         }
-        if (g_cur_room == 0xFFu && walk_neighbors(g_px, g_py) > 2u) break;
     }
     anim_skip = 0;
     mons_dash(0);                     /* back to per-step chase precision */

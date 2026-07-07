@@ -194,6 +194,40 @@ static uint8_t mon_can_reach(uint8_t fx, uint8_t fy, uint8_t tx, uint8_t ty) {
     return 1;
 }
 
+/* Would a LIVE threat strike a hero standing at (x,y)? Dangerous = awake AND
+   already seen by the player AND able to reach (x,y) from an 8-way-adjacent
+   cell under the strict strike rule (no doorway/corner diagonals). A sleeping
+   or never-seen monster is not a threat here — a dash may pull up right beside
+   it. Used to halt a dash one cell short so it keeps a square's spacing from a
+   waking foe (which would otherwise get the first blow). */
+uint8_t mon_threatens(uint8_t x, uint8_t y) {
+    uint8_t i;
+    for (i = 0; i < MAX_MONSTERS; i++) {
+        const monster_t *m = &g_mons[i];
+        if (m->kind == MON_NONE) continue;
+        if (!(m->state & MST_AWAKE)) continue;
+        if (!(m->state & MST_SEEN)) continue;
+        if (!adjacent8(m->x, m->y, x, y)) continue;
+        if (!mon_can_reach(m->x, m->y, x, y)) continue;
+        return 1;
+    }
+    return 0;
+}
+
+/* Any monster at all (asleep or unseen included) within Chebyshev 1 of (x,y).
+   A dash that has just stepped stops when it now stands next to a monster, so
+   it pulls up beside a sleeper or a fresh spawn rather than walking past. */
+uint8_t mon_adjacent_any(uint8_t x, uint8_t y) {
+    uint8_t i;
+    for (i = 0; i < MAX_MONSTERS; i++) {
+        const monster_t *m = &g_mons[i];
+        if (m->kind == MON_NONE) continue;
+        if ((uint8_t)(m->x - x + 1u) <= 2u && (uint8_t)(m->y - y + 1u) <= 2u)
+            return 1;
+    }
+    return 0;
+}
+
 static void mon_step(monster_t *m) {
     int8_t sx = 0, sy = 0;
     if (m->eff & MEF_CONF) {

@@ -36,6 +36,11 @@ extern monster_t g_mons[MAX_MONSTERS];
 void       mons_clear(void);
 void       mons_spawn_level(void);
 monster_t *mon_at(uint8_t x, uint8_t y);
+/* Dash spacing helpers (see actor.c). mon_threatens: would an awake, already
+   seen monster strike a hero standing at (x,y)? mon_adjacent_any: is ANY
+   monster (asleep/unseen too) within Chebyshev 1 of (x,y)? */
+uint8_t    mon_threatens(uint8_t x, uint8_t y);
+uint8_t    mon_adjacent_any(uint8_t x, uint8_t y);
 /* Apply damage; returns 1 if the monster died (slot freed, xp NOT yet
    granted — combat.c handles rewards/messages). */
 uint8_t    mon_damage(monster_t *m, uint8_t dmg);
