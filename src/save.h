@@ -16,7 +16,7 @@ uint8_t save_load(void);        /* 1 = restored */
 void    save_invalidate(void);  /* death / victory wipes the save */
 
 /* Marshalling globals (WRAM). */
-extern uint16_t g_save_rng;     /* rng state in/out across the bank hop */
+extern uint32_t g_save_rng;     /* 32-bit rng state in/out across the bank hop */
 extern uint8_t  g_save_ok;      /* bank_save_exists result */
 
 /* Static-map dirty flag (WRAM). Set whenever g_map changes (dig / trap

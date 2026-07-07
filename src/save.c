@@ -17,12 +17,12 @@
  */
 #define SRAM ((uint8_t *)0xA000)
 #define SAVE_MAGIC 0x47u          /* 'G' */
-#define SAVE_VER   5u          /* static/dynamic split + g_explored */
+#define SAVE_VER   6u          /* 32-bit rng state (g_save_rng widened) */
 
 /* Fixed SRAM layout (see plan_save_bcd PART 1):
  *   [0..5]     header: magic, ver, checksum_lo/hi, len_lo/hi
  *   [6..901]   STATIC:  g_map (896B)              — offset 6, len 896
- *   [902.. ]   DYNAMIC: g_save_rng(2) + chunks + g_explored(112B)
+ *   [902.. ]   DYNAMIC: g_save_rng(4) + chunks + g_explored(112B)
  * The two regions are contiguous with no gap, so the whole-buffer checksum
  * (SRAM[6..len)) equals g_static_sum + dyn_sum. */
 #define STATIC_OFF   6u
@@ -33,7 +33,7 @@
 extern uint8_t  g_id_alias[4][14];
 extern uint16_t g_id_known[4];
 
-uint16_t g_save_rng;
+uint32_t g_save_rng;
 uint8_t  g_save_ok;
 uint8_t  g_save_static_dirty;    /* WRAM; set by save_mark_map_dirty() */
 
@@ -109,7 +109,7 @@ static void serialize_static(void) {
 static void serialize_dynamic(void) {
     uint8_t i;
     cursor = DYNAMIC_OFF;
-    chunk(&g_save_rng, 2);
+    chunk(&g_save_rng, 4);
     for (i = 0; i < N_DYNAMIC; i++)
         chunk(DYNAMIC_CHUNKS[i].p, DYNAMIC_CHUNKS[i].len);
 }

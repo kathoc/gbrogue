@@ -222,10 +222,10 @@ uint8_t ui_title_show(void) {
                     else s32 = (uint16_t)(((uint16_t)DIV_REG << 8) | frames);
 #endif
                     g_run_seed = s32;            /* full 8-digit seed, for repro */
-                    /* the RNG state is 16-bit; fold the 32-bit seed into it so
-                       all eight hex digits influence the run (a 16-bit-only
-                       seed like the debug pin folds to itself) */
-                    rng_seed((uint16_t)(s32 ^ (s32 >> 16)));
+                    /* RNG state is a full 32 bits (xorshift32), so seed it
+                       directly — every one of the eight hex digits selects a
+                       distinct map, no folding collisions. */
+                    rng_seed(s32);
                 }
                 render_fade_out(FADE_OUT_FRAMES);
                 render_art_end();
